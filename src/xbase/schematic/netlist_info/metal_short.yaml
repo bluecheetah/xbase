@@ -1,0 +1,201 @@
+lib_name: xbase
+cell_name: metal_short
+view_name: schematic
+bbox:
+  - -212
+  - 49
+  - 93
+  - 270
+terminals:
+  MINUS:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -140
+            - 240
+            - R0
+          bbox:
+            - -201
+            - 214
+            - -130
+            - 250
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -165
+            - 240
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 2
+  PLUS:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -140
+            - 260
+            - R0
+          bbox:
+            - -201
+            - 234
+            - -130
+            - 270
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -165
+            - 260
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 2
+shapes:
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: MINUS
+      points:
+        -
+          - 0
+          - 60
+        -
+          - 0
+          - 100
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: MINUS
+      origin:
+        - -7
+        - 96
+      alignment: 8
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: MINUS
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: PLUS
+      points:
+        -
+          - 0
+          - 160
+        -
+          - 0
+          - 200
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: PLUS
+      origin:
+        - -7
+        - 164
+      alignment: 2
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: PLUS
+instances:
+  XRM:
+    lib_name: BAG_prim
+    cell_name: res_metal_1
+    view_name: symbol
+    xform:
+      - -40
+      - 170
+      - R0
+    bbox:
+      - -122
+      - 96
+      - 93
+      - 175
+    connections:
+      MINUS: MINUS
+      PLUS: PLUS
+    params:
+      l:
+        - 3
+        - 1u
+      w:
+        - 3
+        - 44n
+    is_primitive: true
+props:
+  connectivityLastUpdated:
+    - 0
+    - 212
+  lastSchematicExtraction:
+    - 4
+    - time_val: 1570653441
+  net#:
+    - 0
+    - 0
+  pin#:
+    - 0
+    - 2
+  schGeometryLastUpdated:
+    - 0
+    - 212
+  schGeometryVersion:
+    - 3
+    - sch.ds.gm.1.4
+  schXtrVersion:
+    - 3
+    - sch.10.0
+app_defs:
+  _dbLastSavedCounter:
+    - 0
+    - 212
+  _dbvCvTimeStamp:
+    - 0
+    - 212
+  cdbRevision:
+    - 0
+    - 227612

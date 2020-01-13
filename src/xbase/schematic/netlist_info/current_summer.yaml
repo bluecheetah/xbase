@@ -1,0 +1,202 @@
+lib_name: xbase
+cell_name: current_summer
+view_name: schematic
+bbox:
+  - 24
+  - -266
+  - 440
+  - -220
+terminals:
+  in<1:0>:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: ipin
+          view_name: symbol
+          xform:
+            - 100
+            - -240
+            - R0
+          bbox:
+            - 43
+            - -266
+            - 100
+            - -230
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - 70
+            - -240
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 0
+  out:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: opin
+          view_name: symbol
+          xform:
+            - 140
+            - -240
+            - R0
+          bbox:
+            - 140
+            - -266
+            - 197
+            - -230
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - 165
+            - -240
+          alignment: 1
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 1
+shapes:
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: in<1:0>
+      points:
+        -
+          - 240
+          - -240
+        -
+          - 280
+          - -240
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: in<1:0>
+      origin:
+        - 276
+        - -233
+      alignment: 8
+      orient: R0
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: in<1:0>
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: out
+      points:
+        -
+          - 400
+          - -240
+        -
+          - 440
+          - -240
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: out
+      origin:
+        - 404
+        - -233
+      alignment: 2
+      orient: R0
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: out
+instances:
+  XTH<1:0>:
+    lib_name: basic
+    cell_name: cds_thru
+    view_name: symbol
+    xform:
+      - 280
+      - -240
+      - R0
+    bbox:
+      - 276
+      - -262
+      - 404
+      - -220
+    connections:
+      dst: <*2>out
+      src: in<1:0>
+    params:
+      {}
+    is_primitive: true
+props:
+  connectivityLastUpdated:
+    - 0
+    - 318
+  instance#:
+    - 0
+    - 1
+  lastSchematicExtraction:
+    - 4
+    - time_val: 1567702604
+  net#:
+    - 0
+    - 0
+  pin#:
+    - 0
+    - 2
+  schGeometryLastUpdated:
+    - 0
+    - 318
+  schGeometryVersion:
+    - 3
+    - sch.ds.gm.1.4
+  schXtrVersion:
+    - 3
+    - sch.10.0
+app_defs:
+  _dbLastSavedCounter:
+    - 0
+    - 318
+  _dbvCvTimeStamp:
+    - 0
+    - 318
+  cdbRevision:
+    - 0
+    - 227612
+  cdnSPDesignMajorVersion:
+    - 0
+    - 2

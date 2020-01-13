@@ -1,0 +1,201 @@
+lib_name: xbase
+cell_name: esd_diode
+view_name: schematic
+bbox:
+  - -212
+  - -26
+  - 59
+  - 250
+terminals:
+  MINUS:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -140
+            - 0
+            - R0
+          bbox:
+            - -201
+            - -26
+            - -130
+            - 10
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -165
+            - 0
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 2
+  PLUS:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -140
+            - 240
+            - R0
+          bbox:
+            - -201
+            - 214
+            - -130
+            - 250
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -165
+            - 240
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 2
+shapes:
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: PLUS
+      points:
+        -
+          - -40
+          - 160
+        -
+          - -40
+          - 200
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: PLUS
+      origin:
+        - -47
+        - 164
+      alignment: 2
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: PLUS
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: MINUS
+      points:
+        -
+          - -40
+          - 60
+        -
+          - -40
+          - 100
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: MINUS
+      origin:
+        - -47
+        - 96
+      alignment: 8
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: MINUS
+instances:
+  XD:
+    lib_name: BAG_prim
+    cell_name: ndio_standard
+    view_name: symbol
+    xform:
+      - -40
+      - 160
+      - R0
+    bbox:
+      - -157
+      - 87
+      - 59
+      - 175
+    connections:
+      MINUS: MINUS
+      PLUS: PLUS
+    params:
+      l:
+        - 3
+        - 4
+      w:
+        - 3
+        - 2
+    is_primitive: true
+props:
+  connectivityLastUpdated:
+    - 0
+    - 380
+  lastSchematicExtraction:
+    - 4
+    - time_val: 1570653458
+  net#:
+    - 0
+    - 0
+  pin#:
+    - 0
+    - 2
+  schGeometryLastUpdated:
+    - 0
+    - 380
+  schGeometryVersion:
+    - 3
+    - sch.ds.gm.1.4
+  schXtrVersion:
+    - 3
+    - sch.10.0
+app_defs:
+  _dbLastSavedCounter:
+    - 0
+    - 380
+  _dbvCvTimeStamp:
+    - 0
+    - 380
+  cdbRevision:
+    - 0
+    - 227612
