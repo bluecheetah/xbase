@@ -567,8 +567,8 @@ class MOSBase(TemplateBase, abc.ABC):
         if tap_ncol > seg:
             # substrate in different columns
             if flip_lr:
-                ncol = col_idx - seg
-                pcol = col_idx - tap_ncol
+                ncol = col_idx
+                pcol = col_idx - tap_ncol + seg
             else:
                 ncol = col_idx
                 pcol = col_idx + tap_ncol - seg
@@ -582,10 +582,10 @@ class MOSBase(TemplateBase, abc.ABC):
             if not row_type.is_substrate:
                 if row_type.is_pwell:
                     vss_list.append(self.add_substrate_contact(ridx, ncol, tile_idx=tile_idx,
-                                                               seg=seg, **kwargs))
+                                                               seg=seg, flip_lr=flip_lr, **kwargs))
                 else:
                     vdd_list.append(self.add_substrate_contact(ridx, pcol, tile_idx=tile_idx,
-                                                               seg=seg, **kwargs))
+                                                               seg=seg, flip_lr=flip_lr, **kwargs))
 
         return tap_ncol
 

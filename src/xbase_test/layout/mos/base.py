@@ -84,7 +84,7 @@ class MOSOnly(MOSBase):
 
 
 class MOSOnlySPM(MOSBase):
-    """A MOSBase of only rows of transistors, no connection specs.
+    """A MOSBase of only rows of transistors with space in middle.
     """
 
     def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
@@ -138,7 +138,7 @@ class MOSOnlySPM(MOSBase):
 
 
 class MOSOnlySPE(MOSBase):
-    """A MOSBase of only rows of transistors, no connection specs.
+    """A MOSBase of only rows of transistors with space on edges.
     """
 
     def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
@@ -178,7 +178,7 @@ class MOSOnlySPE(MOSBase):
 
 
 class SubOnly(MOSBase):
-    """A MOSBase of only rows of transistors, no connection specs.
+    """A MOSBase of only rows of substrates.
     """
 
     def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
