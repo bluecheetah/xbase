@@ -349,6 +349,7 @@ class MOSBase(TemplateBase, abc.ABC):
             stack=stack,
             g_on_s=g_on_s,
             options=kwargs,
+            arr_options=self.arr_info.arr_options,
         )
         master = self.new_template(MOSConn, params=params)
 
@@ -451,7 +452,7 @@ class MOSBase(TemplateBase, abc.ABC):
         conn_layer = self.conn_layer
 
         sub_sep = self.sub_sep_col
-        sub_sep2 = sub_sep // 2
+        sub_sep2 = -(-sub_sep // 2)
 
         ncol = sup_info.ncol
         seg_dbl = ncol - sub_sep * 2
@@ -620,6 +621,7 @@ class MOSBase(TemplateBase, abc.ABC):
             conn_layer=conn_layer,
             seg=seg,
             options=kwargs,
+            arr_options=self.arr_info.arr_options,
         )
         master = self.new_template(MOSTap, params=params)
 
@@ -661,12 +663,14 @@ class MOSBase(TemplateBase, abc.ABC):
 
         if abut_mode is MOSAbutMode.OVERLAY:
             used_arr = self._used_arr
+            arr_options = self.arr_info.arr_options
             for info in abut_list:
                 tile_idx, row_idx = used_arr.flat_row_to_tile_row(info.row_flat)
                 pinfo, tile_yb, flip_tile = self.get_tile_info(tile_idx)
                 row_info, y0, orient = self.get_mos_row_info(pinfo, tile_yb, flip_tile, row_idx)
                 x0 = info.col * self.sd_pitch
-                params = dict(row_info=row_info, edgel=info.edgel, edger=info.edger)
+                params = dict(row_info=row_info, edgel=info.edgel, edger=info.edger,
+                              arr_options=arr_options)
                 master = self.new_template(MOSAbut, params=params)
                 self.add_instance(master, inst_name=f'XA{tile_idx}R{row_idx}C{info.col}',
                                   xform=Transform(x0, y0, orient))

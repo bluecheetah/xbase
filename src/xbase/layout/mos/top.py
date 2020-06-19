@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional, Dict, Type, Tuple, cast, List
+from typing import Any, Optional, Dict, Type, Tuple, cast, List, Mapping
 
 import abc
 
@@ -101,6 +101,8 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
                     sd_pitch: int, w_tot: int, h_tot: int, dy: int, h_end_bot: int, h_end_top: int
                     ) -> None:
         lch = tech_cls.lch
+        arr_options = tech_cls.arr_options
+
         dx = w_edge
         num_tiles = used_arr.num_tiles
         num_cols = used_arr.num_cols
@@ -135,7 +137,7 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
                 self._add_row_edges(w_edge, w_tot, y_edge + dy, orient_edge, row_info,
                                     used_arr.get_edge_info(flat_row_idx, 0),
                                     used_arr.get_edge_info(flat_row_idx, num_cols),
-                                    f'XR{flat_row_idx}')
+                                    f'XR{flat_row_idx}', arr_options)
 
                 if flat_row_idx != last_flat_row_idx:
                     # draw extensions between rows
@@ -178,17 +180,21 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
         flat_row_idx = pinfo.num_rows - 1 if flip_tile else 0
         ri = pinfo.get_row_place_info(flat_row_idx).row_info
         re = ri.bot_ext_info if ri.flip == flip_tile else ri.top_ext_info
-        be = self._add_mos_end(grid, lch, dx, 0, Orientation.R0, h_end_bot, re, num_cols, 'BE')
+        be = self._add_mos_end(grid, lch, dx, 0, Orientation.R0, h_end_bot, re, num_cols, 'BE',
+                               arr_options)
         pinfo, _, flip_tile = used_arr.get_tile_info(num_tiles - 1)
         flat_row_idx = 0 if flip_tile else pinfo.num_rows - 1
         ri = pinfo.get_row_place_info(flat_row_idx).row_info
         re = ri.top_ext_info if ri.flip == flip_tile else ri.bot_ext_info
-        te = self._add_mos_end(grid, lch, dx, h_tot, Orientation.MX, h_end_top, re, num_cols, 'TE')
+        te = self._add_mos_end(grid, lch, dx, h_tot, Orientation.MX, h_end_top, re, num_cols, 'TE',
+                               arr_options)
         # draw corners
         cb = self.new_template(MOSCorner,
-                               params=dict(lch=lch, einfo=be, blk_w=w_edge, blk_h=h_end_bot))
+                               params=dict(lch=lch, einfo=be, blk_w=w_edge, blk_h=h_end_bot,
+                                           arr_options=arr_options))
         ct = self.new_template(MOSCorner,
-                               params=dict(lch=lch, einfo=te, blk_w=w_edge, blk_h=h_end_top))
+                               params=dict(lch=lch, einfo=te, blk_w=w_edge, blk_h=h_end_top,
+                                           arr_options=arr_options))
         self.add_instance(cb, inst_name='XCLL')
         self.add_instance(cb, inst_name='XCLR', xform=Transform(w_tot, 0, Orientation.MY))
         self.add_instance(ct, inst_name='XCUL', xform=Transform(0, h_tot, Orientation.MX))
@@ -216,9 +222,10 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
             return rpinfo.yb_blk + offset, rpinfo.yt_blk + offset
 
     def _add_mos_end(self, mos_grid: RoutingGrid, lch: int, dx: int, y: int, orient: Orientation,
-                     blk_h: int, einfo: RowExtInfo, fg: int, prefix: str) -> MOSEdgeInfo:
+                     blk_h: int, einfo: RowExtInfo, fg: int, prefix: str,
+                     arr_options: Mapping[str, Any]) -> MOSEdgeInfo:
         master = self.new_template(MOSEnd, params=dict(
-            lch=lch, blk_h=blk_h, num_cols=fg, einfo=einfo,
+            lch=lch, blk_h=blk_h, num_cols=fg, einfo=einfo, arr_options=arr_options,
         ), grid=mos_grid)
         self.add_instance(master, inst_name=prefix, xform=Transform(dx, y, orient))
         return master.edge_info
@@ -231,6 +238,7 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
             num_cols=seg,
             left_info=left,
             right_info=right,
+            arr_options=pinfo.arr_info.arr_options,
         )
         try:
             master = self.new_template(MOSSpace, params=params, grid=pinfo.grid)
@@ -249,11 +257,11 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
 
     def _add_row_edges(self, w_edge: int, w_tot: int, y: int, orient: Orientation,
                        row_info: MOSRowInfo, left_info: MOSEdgeInfo, right_info: MOSEdgeInfo,
-                       prefix: str) -> None:
+                       prefix: str, arr_options: Mapping[str, Any]) -> None:
         left_master = self.new_template(MOSRowEdge, params=dict(
-            blk_w=w_edge, rinfo=row_info, einfo=left_info))
+            blk_w=w_edge, rinfo=row_info, einfo=left_info, arr_options=arr_options))
         right_master = self.new_template(MOSRowEdge, params=dict(
-            blk_w=w_edge, rinfo=row_info, einfo=right_info))
+            blk_w=w_edge, rinfo=row_info, einfo=right_info, arr_options=arr_options))
         self.add_instance(left_master, inst_name=f'{prefix}EGL', xform=Transform(0, y, orient))
         self.add_instance(right_master, inst_name=f'{prefix}EGR',
                           xform=Transform(w_tot, y, orient.flip_lr()))
@@ -261,6 +269,8 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
     def _add_ext_row(self, grid: RoutingGrid, tech: MOSTech, lch: int, fg: int, re_bot: RowExtInfo,
                      re_top: RowExtInfo, be_bot: List[BlkExtInfo], be_top: List[BlkExtInfo],
                      dx: int, y0: int, ext_h: int, w_edge: int, w_tot: int, prefix: str) -> None:
+        arr_options = tech.arr_options
+
         cut_mode, bot_exty, top_exty = tech.get_extension_regions(re_bot, re_top, ext_h)
         if cut_mode.num_cut == 2 and bot_exty == top_exty == 0:
             if be_bot[0].guard_ring and be_bot[0].fg_dev[0][1] is be_top[0].fg_dev[0][1]:
@@ -274,13 +284,14 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
 
                 ext_dx = fg_gr * tech.sd_pitch
                 ext_params = dict(lch=lch, num_cols=fg - 2 * fg_gr, height=ext_h, bot_info=re_bot,
-                                  top_info=re_top, gr_info=(fg_edge, fg_gr))
+                                  top_info=re_top, gr_info=(fg_edge, fg_gr),
+                                  arr_options=arr_options)
                 ext_master = self.new_template(MOSExt, params=ext_params, grid=grid)
 
                 # add guard ring
                 gr_params = dict(lch=lch, num_cols=fg_gr, edge_cols=fg_edge, height=ext_h,
                                  bot_info=re_bot, top_info=re_top, sub_type=be_bot[0].fg_dev[0][1],
-                                 einfo=ext_master.edge_info)
+                                 einfo=ext_master.edge_info, arr_options=arr_options)
                 gr_master = self.new_template(MOSExtGR, params=gr_params, grid=grid)
                 edge_info = gr_master.edge_info
 
@@ -290,13 +301,13 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
             else:
                 ext_dx = 0
                 ext_params = dict(lch=lch, num_cols=fg, height=ext_h, bot_info=re_bot,
-                                  top_info=re_top, gr_info=(0, 0))
+                                  top_info=re_top, gr_info=(0, 0), arr_options=arr_options)
                 ext_master = self.new_template(MOSExt, params=ext_params, grid=grid)
                 edge_info = ext_master.edge_info
 
             self.add_instance(ext_master, inst_name=f'{prefix}EX', xform=Transform(dx + ext_dx, y0))
             edge_master = self.new_template(MOSExtEdge, params=dict(
-                lch=lch, blk_w=w_edge, einfo=edge_info))
+                lch=lch, blk_w=w_edge, einfo=edge_info, arr_options=arr_options))
             self.add_instance(edge_master, inst_name=f'{prefix}EXEDGEL', xform=Transform(0, y0))
             self.add_instance(edge_master, inst_name=f'{prefix}EXEDGER',
                               xform=Transform(w_tot, y0, Orientation.MY))

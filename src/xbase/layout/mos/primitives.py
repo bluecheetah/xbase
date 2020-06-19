@@ -77,7 +77,8 @@ class MOSConn(TemplateBase):
             w='transistor width, in resolution units or fins.',
             stack='number of transistors in a stack.',
             g_on_s='True if gate is aligned with source.',
-            options='Optional process-specific parameters.'
+            options='Optional process-specific parameters.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
@@ -88,9 +89,11 @@ class MOSConn(TemplateBase):
         stack: int = self.params['stack']
         g_on_s: bool = self.params['g_on_s']
         options: Param = self.params['options']
+        arr_options: Param = self.params['arr_options']
 
         grid = self.grid
-        tech_cls: MOSTech = grid.tech_info.get_device_tech('mos', lch=row_info.lch)
+        tech_cls: MOSTech = grid.tech_info.get_device_tech('mos', lch=row_info.lch,
+                                                           arr_options=arr_options)
 
         mos_info = tech_cls.get_mos_conn_info(row_info, conn_layer, seg, w, stack, g_on_s, options)
         draw_layout_in_template(self, mos_info.lay_info)
@@ -185,7 +188,8 @@ class MOSTap(TemplateBase):
             row_info='transistor row information dictionary.',
             conn_layer='connection layer ID.',
             seg='number of segments.',
-            options='Optional process-specific parameters.'
+            options='Optional process-specific parameters.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
@@ -193,8 +197,10 @@ class MOSTap(TemplateBase):
         conn_layer: int = self.params['conn_layer']
         seg: int = self.params['seg']
         options: Param = self.params['options']
+        arr_options: Param = self.params['arr_options']
 
-        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=row_info.lch)
+        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=row_info.lch,
+                                                                arr_options=arr_options)
 
         mos_info = tech_cls.get_mos_tap_info(row_info, conn_layer, seg, options)
         draw_layout_in_template(self, mos_info.lay_info)
@@ -235,14 +241,17 @@ class MOSAbut(TemplateBase):
             row_info='transistor row information dictionary.',
             edgel='edge info of the block to the left.',
             edger='edge info of the block to the right.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
         row_info: MOSRowInfo = self.params['row_info']
         edgel: MOSEdgeInfo = self.params['edgel']
         edger: MOSEdgeInfo = self.params['edger']
+        arr_options: Param = self.params['arr_options']
 
-        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=row_info.lch)
+        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=row_info.lch,
+                                                                arr_options=arr_options)
 
         lay_info = tech_cls.get_mos_abut_info(row_info, edgel, edger)
         draw_layout_in_template(self, lay_info)
@@ -296,6 +305,7 @@ class MOSSpace(TemplateBase):
             num_cols='number of columns.',
             left_info='edge info of the block to the left.',
             right_info='edge info of the block to the right.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
@@ -303,8 +313,10 @@ class MOSSpace(TemplateBase):
         num_cols: int = self.params['num_cols']
         left_info: MOSEdgeInfo = self.params['left_info']
         right_info: MOSEdgeInfo = self.params['right_info']
+        arr_options: Param = self.params['arr_options']
 
-        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=row_info.lch)
+        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=row_info.lch,
+                                                                arr_options=arr_options)
 
         mos_info = tech_cls.get_mos_space_info(row_info, num_cols, left_info, right_info)
         draw_layout_in_template(self, mos_info.lay_info)
@@ -348,6 +360,7 @@ class MOSExt(TemplateBase):
             bot_info='RowExtInfo object of bottom row.',
             top_info='RowExtInfo object of top row.',
             gr_info='Tuple of guard ring edge tap fingers and total guard ring edge fingers.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
@@ -357,8 +370,10 @@ class MOSExt(TemplateBase):
         bot_info: RowExtInfo = self.params['bot_info']
         top_info: RowExtInfo = self.params['top_info']
         gr_info: Tuple[int, int] = self.params['gr_info']
+        arr_options: Param = self.params['arr_options']
 
-        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch)
+        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch,
+                                                                arr_options=arr_options)
 
         ext_info = tech_cls.get_mos_ext_info(num_cols, height, bot_info, top_info, gr_info)
         draw_layout_in_template(self, ext_info.lay_info)
@@ -401,6 +416,7 @@ class MOSExtGR(TemplateBase):
             top_info='RowExtInfo object of top row.',
             sub_type='guard ring substrate type.',
             einfo='MOSEdgeInfo object of adjacent MOSExt block.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
@@ -413,8 +429,10 @@ class MOSExtGR(TemplateBase):
         top_info: RowExtInfo = params['top_info']
         sub_type: MOSType = params['sub_type']
         einfo: MOSEdgeInfo = params['einfo']
+        arr_options: Param = params['arr_options']
 
-        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch)
+        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch,
+                                                                arr_options=arr_options)
 
         ext_info = tech_cls.get_mos_ext_gr_info(num_cols, edge_cols, height,
                                                 bot_info, top_info, sub_type, einfo)
@@ -454,6 +472,7 @@ class MOSEnd(TemplateBase):
             blk_h='end height in resolution units.',
             num_cols='number of columns.',
             einfo='RowExtInfo object of adjacent row.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
@@ -462,8 +481,10 @@ class MOSEnd(TemplateBase):
         blk_h: int = params['blk_h']
         num_cols: int = params['num_cols']
         einfo: RowExtInfo = params['einfo']
+        arr_options: Param = params['arr_options']
 
-        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch)
+        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch,
+                                                                arr_options=arr_options)
 
         end_info = tech_cls.get_mos_end_info(blk_h, num_cols, einfo)
         draw_layout_in_template(self, end_info.lay_info)
@@ -496,14 +517,17 @@ class MOSRowEdge(TemplateBase):
             blk_w='edge width in resolution units.',
             rinfo='MOSRowInfo object of adjacent row.',
             einfo='MOSEdgeInfo object of adjacent MOSConn block.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
         blk_w: int = self.params['blk_w']
         rinfo: MOSRowInfo = self.params['rinfo']
         einfo: MOSEdgeInfo = self.params['einfo']
+        arr_options: Param = self.params['arr_options']
 
-        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=rinfo.lch)
+        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=rinfo.lch,
+                                                                arr_options=arr_options)
 
         lay_info = tech_cls.get_mos_row_edge_info(blk_w, rinfo, einfo)
         draw_layout_in_template(self, lay_info)
@@ -534,14 +558,17 @@ class MOSExtEdge(TemplateBase):
             lch='channel length in resolution units.',
             blk_w='edge width in resolution units.',
             einfo='MOSEdgeInfo object of adjacent MOSExt or MOSExtGR block.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
         lch: int = self.params['lch']
         blk_w: int = self.params['blk_w']
         einfo: MOSEdgeInfo = self.params['einfo']
+        arr_options: Param = self.params['arr_options']
 
-        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch)
+        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch,
+                                                                arr_options=arr_options)
 
         lay_info = tech_cls.get_mos_ext_edge_info(blk_w, einfo)
         draw_layout_in_template(self, lay_info)
@@ -587,6 +614,7 @@ class MOSCorner(TemplateBase):
             blk_w='edge width in resolution units.',
             blk_h='end height in resolution units.',
             einfo='MOSEdgeInfo object of adjacent MOSEnd block.',
+            arr_options='Optional process-specific parameters for the array.',
         )
 
     def draw_layout(self) -> None:
@@ -594,8 +622,10 @@ class MOSCorner(TemplateBase):
         blk_w: int = self.params['blk_w']
         blk_h: int = self.params['blk_h']
         einfo: MOSEdgeInfo = self.params['einfo']
+        arr_options: Param = self.params['arr_options']
 
-        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch)
+        tech_cls: MOSTech = self.grid.tech_info.get_device_tech('mos', lch=lch,
+                                                                arr_options=arr_options)
 
         corner_info = tech_cls.get_mos_corner_info(blk_w, blk_h, einfo)
         draw_layout_in_template(self, corner_info.lay_info)

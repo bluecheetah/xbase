@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Tuple, Dict, Any, List
+from typing import TYPE_CHECKING, Tuple, Dict, Any, List, Mapping
 
 import abc
 import math
@@ -58,15 +58,17 @@ class MOSTech(abc.ABC):
         the TechInfo object.
     lch : int
         the channel length.
-    mos_entry_name : str
-        the transistor technology parameters entry name.
+    arr_options : Mapping[str, Any]
+        process-specific options for the transistor array.
     """
 
-    def __init__(self, tech_info: TechInfo, lch: int, mos_entry_name: str) -> None:
+    def __init__(self, tech_info: TechInfo, lch: int, arr_options: Mapping[str, Any]) -> None:
         self._tech_info = tech_info
         self._lch = lch
+        self._arr_options = arr_options
 
         # fill config dictionary
+        mos_entry_name: str = arr_options.get('mos_entry_name', 'mos')
         self._mos_config = {}
         for k, v in tech_info.config[mos_entry_name].items():
             if isinstance(v, dict):
@@ -203,6 +205,10 @@ class MOSTech(abc.ABC):
     @property
     def lch(self) -> int:
         return self._lch
+
+    @property
+    def arr_options(self) -> Mapping[str, Any]:
+        return self._arr_options
 
     @property
     def tech_info(self) -> TechInfo:

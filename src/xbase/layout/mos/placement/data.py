@@ -59,12 +59,17 @@ class MOSArrayPlaceInfo:
         the connection layer ID.
     half_space : bool
         True to allow half-track spaces.
+    arr_options : Optional[Mapping[str, Any]]
+        Process-specific options for the entire array.
     """
 
     def __init__(self, parent_grid: RoutingGrid, lch: int, tr_widths: WDictType,
                  tr_spaces: SpDictType, *, top_layer: Optional[int] = None,
-                 conn_layer: Optional[int] = None, half_space: bool = True) -> None:
-        self._tech_cls: MOSTech = parent_grid.tech_info.get_device_tech('mos', lch=lch)
+                 conn_layer: Optional[int] = None, half_space: bool = True,
+                 arr_options: Optional[Mapping[str, Any]] = None) -> None:
+        arr_options = ImmutableSortedDict(arr_options)
+        self._tech_cls: MOSTech = parent_grid.tech_info.get_device_tech('mos', lch=lch,
+                                                                        arr_options=arr_options)
 
         # update routing grid
         if conn_layer is None:
@@ -81,6 +86,7 @@ class MOSArrayPlaceInfo:
         self._conn_layer = conn_layer
         self._top_layer = top_layer
         self._half_space = half_space
+        self._arr_options: Param = arr_options
 
         # compute hash
         seed = self._lch
@@ -88,6 +94,7 @@ class MOSArrayPlaceInfo:
         seed = combine_hash(seed, self._conn_layer)
         seed = combine_hash(seed, self._top_layer)
         seed = combine_hash(seed, self._half_space)
+        seed = combine_hash(seed, hash(self._arr_options))
         self._hash = seed
 
     def __hash__(self) -> int:
@@ -99,18 +106,23 @@ class MOSArrayPlaceInfo:
                 self._conn_layer == other._conn_layer and
                 self._top_layer == other._top_layer and
                 self._half_space == other._half_space and
-                self._tr_manager == other._tr_manager)
+                self._tr_manager == other._tr_manager and
+                self._arr_options == other._arr_options)
 
     @classmethod
-    def get_conn_layer(cls, tech_info: TechInfo, lch: int) -> int:
-        return tech_info.get_device_tech('mos', lch=lch).conn_layer
+    def get_conn_layer(cls, tech_info: TechInfo, lch: int,
+                       arr_options: Optional[Mapping[str, Any]] = None) -> int:
+        if arr_options is None:
+            arr_options = {}
+        return tech_info.get_device_tech('mos', lch=lch, arr_options=arr_options).conn_layer
 
     @classmethod
     def make_array_info(cls, grid: RoutingGrid, val: Mapping[str, Any]) -> MOSArrayPlaceInfo:
         return MOSArrayPlaceInfo(grid, val['lch'], val['tr_widths'], val['tr_spaces'],
                                  top_layer=val.get('top_layer', None),
                                  conn_layer=val.get('conn_layer', None),
-                                 half_space=val.get('half_space', True))
+                                 half_space=val.get('half_space', True),
+                                 arr_options=val.get('arr_options', None))
 
     @property
     def grid(self) -> RoutingGrid:
@@ -148,6 +160,10 @@ class MOSArrayPlaceInfo:
     @property
     def half_space(self) -> int:
         return self._half_space
+
+    @property
+    def arr_options(self) -> Param:
+        return self._arr_options
 
     def get_tile_blk_h(self, half_blk: bool = True) -> int:
         return lcm([self._tr_manager.grid.get_block_size(self._top_layer, half_blk_y=half_blk)[1],
@@ -1251,6 +1267,7 @@ def _save_arr_info(ainfo: MOSArrayPlaceInfo, fname: Path) -> None:
         top_layer=ainfo.top_layer,
         conn_layer=ainfo.conn_layer,
         half_space=ainfo.half_space,
+        arr_options=ainfo.arr_options.to_yaml(),
     ))
 
 
