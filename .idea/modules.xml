@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/xbase.iml" filepath="$PROJECT_DIR$/.idea/xbase.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/xbase_bcad.iml" filepath="$PROJECT_DIR$/.idea/xbase_bcad.iml" />
     </modules>
   </component>
 </project>

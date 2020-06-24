@@ -1,9 +1,0 @@
-- lch: 36
-  top_layer: 4
-  tr_widths:
-    sup: {2: 2, 3: 2, 4: 2}
-    guard: {2: 2, 3: 2, 4: 2}
-    sig_hs: {3: 1}
-    padout: {2: 2, 3: 2, 4: 2}
-  tr_spaces:
-    !!python/tuple ['sig_hs', '']: {3: 1}

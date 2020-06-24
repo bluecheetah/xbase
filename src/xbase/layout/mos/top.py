@@ -242,10 +242,10 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
         )
         try:
             master = self.new_template(MOSSpace, params=params, grid=pinfo.grid)
-        except ODImplantEnclosureError:
+        except ODImplantEnclosureError as err:
             raise ValueError('Not enough space for OD-implant enclosure.\n'
                              f'Error on tile {tile_idx}, row {row_idx}, '
-                             f'column [{start}, {start + seg})')
+                             f'column [{start}, {start + seg})') from err
 
         y0, orient = MOSBase.register_device(used_arr, tile_idx, row_idx, start, seg, False,
                                              master.left_info, master.right_info, master.top_info,
