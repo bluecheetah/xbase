@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any
+from typing import Any, Union, Sequence, Tuple
 
 from dataclasses import dataclass
+
+from pybag.core import BBox
 
 from bag.util.immutable import ImmutableSortedDict
 
@@ -24,9 +26,10 @@ from ..data import LayoutInfo, WireArrayInfo
 
 @dataclass(eq=True, frozen=True)
 class ArrayLayInfo:
-    """The transistor block layout information object."""
+    """The unit array layout information object."""
     lay_info: LayoutInfo
-    ports_info: ImmutableSortedDict[str, WireArrayInfo]
+    ports_info: ImmutableSortedDict[str, Union[WireArrayInfo,
+                                               Sequence[Tuple[str, Sequence[BBox]]]]]
     edge_info: ImmutableSortedDict[str, Any]
     end_info: ImmutableSortedDict[str, Any]
 

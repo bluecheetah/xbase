@@ -20,7 +20,7 @@ from bag.layout.routing.grid import RoutingGrid
 from bag.layout.template import TemplateBase, TemplateDB
 
 from ..data import draw_layout_in_template
-from .data import ArrayLayInfo
+from .data import ArrayLayInfo, WireArrayInfo
 from .tech import ArrayTech
 
 
@@ -56,11 +56,17 @@ class ArrayUnit(TemplateBase):
 
         draw_layout_in_template(self, blk_info.lay_info)
         grid = self.grid
-        for key, val in blk_info.ports_info.items():
-            cur_warr = val.to_warr(grid)
-            self.add_pin(key, cur_warr)
-            self.prim_top_layer = cur_warr.layer_id
-
+        if isinstance(list(blk_info.ports_info.values())[0], WireArrayInfo):
+            for key, val in blk_info.ports_info.items():
+                cur_warr = val.to_warr(grid)
+                self.add_pin(key, cur_warr)
+                self.prim_top_layer = cur_warr.layer_id
+        else:
+            for port_name, port_info in blk_info.ports_info.items():
+                for lay_name, bbox_list in port_info:
+                    for bbox in bbox_list:
+                        self.add_pin_primitive(port_name, lay_name, bbox)
+            self.prim_top_layer = grid.bot_layer
 
 class ArrayEnd(TemplateBase):
     """End row block of device array.

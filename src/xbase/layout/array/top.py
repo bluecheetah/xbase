@@ -115,7 +115,7 @@ class ArrayBaseWrapper(TemplateBase):
         inst = self.add_instance(master, inst_name='RES', xform=Transform(corner_w, corner_h))
 
         # set edge parameters
-        self.edge_info = TemplateEdgeInfo(c_master.left_edge, c_master.bottm_edge,
+        self.edge_info = TemplateEdgeInfo(c_master.left_edge, c_master.bottom_edge,
                                           c_master.left_edge, c_master.bottom_edge)
 
         return inst
