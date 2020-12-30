@@ -68,6 +68,7 @@ class ArrayUnit(TemplateBase):
                         self.add_pin_primitive(port_name, lay_name, bbox)
             self.prim_top_layer = grid.bot_layer
 
+
 class ArrayEnd(TemplateBase):
     """End row block of device array.
 

@@ -47,3 +47,7 @@ class ResTech(ArrayTech, abc.ABC):
     @property
     def threshold_default(self) -> str:
         return self._res_config['threshold_default']
+
+    @property
+    def has_substrate_port(self) -> bool:
+        return self._res_config['has_substrate_port']
