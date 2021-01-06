@@ -15,8 +15,10 @@
 
 """This module defines the default transistor characterization layout generator."""
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Type
 
+from bag.design.database import ModuleDB
+from bag.design.module import Module
 from bag.util.immutable import Param
 from bag.layout.template import TemplateDB
 
@@ -33,6 +35,11 @@ class MOSCharCore(MOSBase):
 
     def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
         MOSBase.__init__(self, temp_db, params, **kwargs)
+
+    @classmethod
+    def get_schematic_class(cls) -> Optional[Type[Module]]:
+        # noinspection PyTypeChecker
+        return ModuleDB.get_schematic_class('xbase', 'mos_char')
 
     @classmethod
     def get_params_info(cls) -> Dict[str, str]:
