@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, Type, cast, Mapping
+from typing import Any, Dict, Type, cast, Mapping, Optional
 
 from pybag.core import BBox, Transform
 from pybag.enum import Orientation
@@ -23,6 +23,7 @@ from bag.util.importlib import import_class
 from bag.layout.data import TemplateEdgeInfo
 from bag.layout.template import TemplateDB, TemplateBase
 from bag.layout.core import PyLayInstance
+from bag.design.module import Module
 
 from .tech import ArrayTech
 from .primitives import ArrayEnd, ArrayEdge, ArrayCorner
@@ -34,12 +35,21 @@ class ArrayBaseWrapper(TemplateBase):
     def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
         TemplateBase.__init__(self, temp_db, params, **kwargs)
 
+        self._core: Optional[ArrayBase] = None
+
+    @property
+    def core(self) -> ArrayBase:
+        return self._core
+
     @classmethod
     def get_params_info(cls) -> Dict[str, str]:
         return dict(
             cls_name='wrapped class name.',
             params='parameters for the wrapped class.',
         )
+
+    def get_schematic_class_inst(self) -> Optional[Type[Module]]:
+        return self._core.get_schematic_class_inst()
 
     def get_layout_basename(self) -> str:
         cls_name: str = self.params.get('cls_name', '')
@@ -65,6 +75,7 @@ class ArrayBaseWrapper(TemplateBase):
 
     def draw_boundaries(self, master: ArrayBase, top_layer: int, *,
                         half_blk_x: bool = True, half_blk_y: bool = True) -> PyLayInstance:
+        self._core = master
         tech_cls: ArrayTech = master.tech_cls
         core_box: BBox = master.bound_box
         info: ArrayPlaceInfo = master.place_info
