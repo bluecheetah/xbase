@@ -56,6 +56,9 @@ class ResBasePlaceInfo(ArrayPlaceInfo):
         self._mos_type = MOSType[mos_type]
         self._threshold = threshold
 
+        self._w_res = tech_cls.get_width(**kwargs)
+        self._l_res = tech_cls.get_length(**kwargs)
+
     def __eq__(self, other: Any) -> bool:
         # noinspection PyProtectedMember
         return (ArrayPlaceInfo.__eq__(self, other) and
@@ -89,6 +92,14 @@ class ResBasePlaceInfo(ArrayPlaceInfo):
     @property
     def has_substrate_port(self) -> bool:
         return self._res_config['has_substrate_port']
+
+    @property
+    def w_res(self) -> int:
+        return self._w_res
+
+    @property
+    def l_res(self) -> int:
+        return self._l_res
 
 
 class ResArrayBase(ArrayBase, abc.ABC):
