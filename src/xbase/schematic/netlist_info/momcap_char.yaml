@@ -1,5 +1,5 @@
 lib_name: xbase
-cell_name: momcap_core
+cell_name: momcap_char
 view_name: schematic
 bbox:
   - -350
@@ -7,6 +7,45 @@ bbox:
   - 174
   - 150
 terminals:
+  VSS:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -280
+            - 80
+            - R0
+          bbox:
+            - -341
+            - 54
+            - -270
+            - 90
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -305
+            - 80
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 2
+    ttype: 2
   minus:
     obj:
       - 1
@@ -250,19 +289,19 @@ instances:
 props:
   connectivityLastUpdated:
     - 0
-    - 872
+    - 1026
   lastSchematicExtraction:
     - 4
-    - time_val: 1610164157
+    - time_val: 1612159932
   net#:
     - 0
     - 0
   pin#:
     - 0
-    - 2
+    - 3
   schGeometryLastUpdated:
     - 0
-    - 872
+    - 1026
   schGeometryVersion:
     - 3
     - sch.ds.gm.1.4
@@ -272,10 +311,10 @@ props:
 app_defs:
   _dbLastSavedCounter:
     - 0
-    - 872
+    - 1026
   _dbvCvTimeStamp:
     - 0
-    - 872
+    - 1026
   cdbRevision:
     - 0
     - 227612

@@ -1,12 +1,25 @@
 lib_name: xbase
-cell_name: momcap_core
+cell_name: momcap_char
 view_name: symbol
 bbox:
   - -4
-  - 0
+  - -20
   - 184
   - 120
 terminals:
+  VSS:
+    obj:
+      - 0
+      - layer: 229
+        purpose: 4294967295
+        net: ""
+        bbox:
+          - 86
+          - -4
+          - 94
+          - 4
+    stype: 2
+    ttype: 2
   minus:
     obj:
       - 0
@@ -50,6 +63,22 @@ shapes:
       visible: true
       drafting: true
       text: plus
+  -
+    - 7
+    - layer: 229
+      purpose: 237
+      net: ""
+      origin:
+        - 76
+        - -10
+      alignment: 1
+      orient: R0
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: VSS
   -
     - 7
     - layer: 229
@@ -173,27 +202,27 @@ instances:
 props:
   interfaceLastChanged:
     - 4
-    - time_val: 1610164038
+    - time_val: 1612159919
   partName:
     - 3
-    - momcap_core
+    - momcap_char
   pin#:
     - 0
-    - 2
+    - 3
   portOrder:
     - 5
     - name: ILList
-      bin_val: ("minus" "plus")
+      bin_val: ("minus" "plus" "VSS")
   vendorName:
     - 3
     - ""
 app_defs:
   _dbLastSavedCounter:
     - 0
-    - 89
+    - 108
   _dbvCvTimeStamp:
     - 0
-    - 89
+    - 108
   cdbRevision:
     - 0
     - 227612
