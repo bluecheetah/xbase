@@ -12,6 +12,7 @@
         <CLASSES>
           <root url="jar://$MODULE_DIR$/../lib/built-in-stubs.jar!/" />
         </CLASSES>
+        <JAVADOC />
         <SOURCES />
       </library>
     </orderEntry>
@@ -21,11 +22,11 @@
     <option name="requirementsPath" value="" />
   </component>
   <component name="PyDocumentationSettings">
-    <option name="analyzeDoctest" value="false" />
+    <option name="format" value="NUMPY" />
     <option name="myDocStringFormat" value="NumPy" />
+    <option name="analyzeDoctest" value="false" />
   </component>
   <component name="TestRunnerService">
-    <option name="projectConfiguration" value="pytest" />
     <option name="PROJECT_TEST_RUNNER" value="pytest" />
   </component>
 </module>
