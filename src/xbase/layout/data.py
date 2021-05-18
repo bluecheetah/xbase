@@ -59,6 +59,7 @@ class ViaInfo:
     ny: int = 1
     spx: int = 0
     spy: int = 0
+    priority: int = 0
 
 
 @dataclass(eq=True, frozen=True)
@@ -118,7 +119,7 @@ def draw_layout_in_template(template: TemplateBase, lay_info: LayoutInfo,
                                    vinfo.h, num_rows=vinfo.vny, num_cols=vinfo.vnx,
                                    sp_rows=vinfo.vspy, sp_cols=vinfo.vspx, enc1=vinfo.enc1,
                                    enc2=vinfo.enc2, nx=vinfo.nx, ny=vinfo.ny, spx=vinfo.spx,
-                                   spy=vinfo.spy)
+                                   spy=vinfo.spy, priority=vinfo.priority)
 
     if set_bbox:
         template.prim_bound_box = lay_info.bound_box
