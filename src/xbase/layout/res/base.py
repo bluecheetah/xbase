@@ -15,14 +15,19 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Mapping, List
+import abc
 
+from typing import Any, Optional, Mapping, List, cast, Union, Tuple
+
+from bag.util.immutable import Param
+from bag.layout.template import TemplateDB
 from bag.layout.tech import TechInfo
-from bag.layout.routing.base import WDictType, SpDictType
+from bag.layout.routing.base import WDictType, SpDictType, WireArray
 from bag.layout.routing.grid import RoutingGrid, TrackSpec
 
+from ..mos.data import MOSType
 from ..enum import ExtendMode
-from ..array.base import ArrayPlaceInfo
+from ..array.base import ArrayPlaceInfo, ArrayBase
 from .tech import ResTech
 
 
@@ -35,6 +40,7 @@ class ResBasePlaceInfo(ArrayPlaceInfo):
                  **kwargs: Any) -> None:
         metal = (res_type == 'metal')
         tech_cls: ResTech = parent_grid.tech_info.get_device_tech('res', metal=metal)
+        self._res_config = parent_grid.tech_info.config['res_metal' if metal else 'res']
 
         if not mos_type:
             mos_type = tech_cls.mos_type_default
@@ -47,8 +53,11 @@ class ResBasePlaceInfo(ArrayPlaceInfo):
                                 mos_type=mos_type, threshold=threshold, **kwargs)
 
         self._res_type = res_type
-        self._mos_type = mos_type
+        self._mos_type = MOSType[mos_type]
         self._threshold = threshold
+
+        self._w_res = tech_cls.get_width(**kwargs)
+        self._l_res = tech_cls.get_length(**kwargs)
 
     def __eq__(self, other: Any) -> bool:
         # noinspection PyProtectedMember
@@ -69,9 +78,76 @@ class ResBasePlaceInfo(ArrayPlaceInfo):
         return self._res_type
 
     @property
-    def mos_type(self) -> str:
+    def mos_type(self) -> MOSType:
         return self._mos_type
 
     @property
     def threshold(self) -> str:
         return self._threshold
+
+    @property
+    def res_config(self) -> Mapping[str, Any]:
+        return self._res_config
+
+    @property
+    def has_substrate_port(self) -> bool:
+        return self._res_config['has_substrate_port']
+
+    @property
+    def w_res(self) -> int:
+        return self._w_res
+
+    @property
+    def l_res(self) -> int:
+        return self._l_res
+
+
+class ResArrayBase(ArrayBase, abc.ABC):
+    """Array of resistors"""
+
+    def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
+        ArrayBase.__init__(self, temp_db, params, **kwargs)
+
+    @property
+    def has_substrate_port(self) -> bool:
+        return cast(ResTech, self.tech_cls).has_substrate_port
+
+    @property
+    def sub_type(self) -> MOSType:
+        return cast(ResBasePlaceInfo, self.place_info).mos_type
+
+    def draw_base(self, obj: Union[ResBasePlaceInfo, Mapping[str, Any]]) -> ResBasePlaceInfo:
+        if isinstance(obj, ResBasePlaceInfo):
+            pinfo = obj
+        else:
+            pinfo = ResBasePlaceInfo(self.grid, **obj)
+
+        super().draw_base(pinfo)
+        return pinfo
+
+    def get_res_ports(self, row_idx: int, col_idx: int,
+                      top_port_name: str = "PLUS", bot_port_name: str = 'MINUS'
+                      ) -> Tuple[WireArray, WireArray]:
+        """Returns the port of the given resistor.
+
+        Parameters
+        ----------
+        row_idx : int
+            the resistor row index.  0 is the bottom row.
+        col_idx : int
+            the resistor column index.  0 is the left-most column.
+        top_port_name: str
+            name of the top port. Defaults to "PLUS"
+        bot_port_name: str
+            name of the bottom port. Defaults to "MINUS"
+
+        Returns
+        -------
+        bot_warr : WireArray
+            the bottom port as WireArray.
+        top_warr : WireArray
+            the top port as WireArray.
+        """
+
+        return self.get_device_port(col_idx, row_idx, bot_port_name), \
+            self.get_device_port(col_idx, row_idx, top_port_name)
