@@ -138,10 +138,12 @@ class ArrayPlaceInfo:
 
     @property
     def width(self) -> int:
+        """Width of a unit cell, in resolution units"""
         return self._w
 
     @property
     def height(self) -> int:
+        """Height of a unit cell, in resolution units"""
         return self._h
 
     @property
@@ -237,7 +239,7 @@ class ArrayBase(TemplateBase, abc.ABC):
                         ) -> HalfInt:
         return self.get_track_info(wire_name, wire_idx=wire_idx, layer=layer)[0]
 
-    def get_device_port(self, xidx: int, yidx: int, name: str) -> WireArray:
+    def get_device_port(self, xidx: int, yidx: int, name: str) -> Union[WireArray, BBox]:
         w = self._info.width
         h = self._info.height
         orient = Orientation.R0

@@ -19,6 +19,8 @@ import abc
 
 from typing import Any, Optional, Mapping, List, cast, Union, Tuple
 
+from pybag.core import BBox
+
 from bag.util.immutable import Param
 from bag.layout.template import TemplateDB
 from bag.layout.tech import TechInfo
@@ -103,7 +105,22 @@ class ResBasePlaceInfo(ArrayPlaceInfo):
 
 
 class ResArrayBase(ArrayBase, abc.ABC):
-    """Array of resistors"""
+    """An abstract template that draws analog resistors array and connections.
+
+    This template assumes that the resistor array uses 4 routing layers, with
+    directions x/y/x/y.  The lower 2 routing layers is used to connect between
+    adjacent resistors, and pin will be drawn on the upper 2 routing layers.
+
+    Like for MOSBase, conn_layer should return the top-most layer of the primitive,
+    i.e. the pin layer. We can then connect BBoxs or WireArrays to the pins using
+    the next layer.
+    Unlike BAG2, we assume the conn_layer is BELOW the bottom-most routing layer
+    described above (i.e. below the first horizontal resistor routing layer).
+    This is to allow for more control of the low level wire placement.
+    One effect of this is that resistor primitives can be either WireArrays or BBoxs,
+    so classes using ResArrayBase need to be coded for both.
+    Primitives must be design with connecting to the above horizontal metal in mind.
+    """
 
     def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
         ArrayBase.__init__(self, temp_db, params, **kwargs)
@@ -127,7 +144,7 @@ class ResArrayBase(ArrayBase, abc.ABC):
 
     def get_res_ports(self, row_idx: int, col_idx: int,
                       top_port_name: str = "PLUS", bot_port_name: str = 'MINUS'
-                      ) -> Tuple[WireArray, WireArray]:
+                      ) -> Union[Tuple[WireArray, WireArray], Tuple[BBox, BBox]]:
         """Returns the port of the given resistor.
 
         Parameters
