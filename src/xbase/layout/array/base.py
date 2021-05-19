@@ -138,7 +138,7 @@ class ArrayPlaceInfo:
 
     @property
     def width(self) -> int:
-        """Height of a unit cell, in resolution units"""
+        """Width of a unit cell, in resolution units"""
         return self._w
 
     @property
