@@ -15,12 +15,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Mapping, List, Union, Type, TypeVar, Tuple
+from typing import Any, Optional, Mapping, List, Union, Type, TypeVar, Tuple, cast
 
 import abc
 
 from pybag.enum import Orientation
-from pybag.core import Transform, BBox
+from pybag.core import Transform, BBox, BBoxArray
 
 from bag.util.math import HalfInt
 from bag.util.immutable import Param, combine_hash, ImmutableSortedDict
@@ -239,7 +239,7 @@ class ArrayBase(TemplateBase, abc.ABC):
                         ) -> HalfInt:
         return self.get_track_info(wire_name, wire_idx=wire_idx, layer=layer)[0]
 
-    def get_device_port(self, xidx: int, yidx: int, name: str) -> Union[WireArray, BBox]:
+    def get_device_port(self, xidx: int, yidx: int, name: str) -> Union[WireArray, BBox, BBoxArray]:
         w = self._info.width
         h = self._info.height
         orient = Orientation.R0
@@ -254,5 +254,27 @@ class ArrayBase(TemplateBase, abc.ABC):
             orient = orient.flip_ud()
 
         xform = Transform(dx, dy, orient)
-
-        return self._unit.get_port(name).get_pins()[0].get_transform(xform)
+        pins = self._unit.get_port(name).get_pins()
+        nx = len(pins)
+        if nx == 1:
+            return pins[0].get_transform(xform)
+        else:
+            if isinstance(pins[0], WireArray):
+                # Combine into 1 WireArray with num > 1 if possible
+                pins = self.connect_wires(pins[0])
+                return pins[0].get_transform(xform)
+            else:  # List of BBox
+                pins = [cast(BBox, bbox) for bbox in pins]
+                yl = pins[0].yl
+                yh = pins[0].yh
+                w = pins[0].w
+                spx = pins[1].xm - pins[0].xm
+                for pidx, pin in enumerate(pins[1:]):
+                    if not (pin.yl == yl and pin.yh == yh and pin.w == w):
+                        # cannot be combined into BBoxArray if yl, yh, w are not same
+                        return pins[0].get_transform(xform)
+                    if pidx != nx - 2:
+                        if pins[pidx + 2].xm - pin.xm != spx:
+                            # cannot be combined into BBoxArray if spx is not same
+                            return pins[0].get_transform(xform)
+                return BBoxArray(pins[0], nx, spx=spx).get_transform(xform)
