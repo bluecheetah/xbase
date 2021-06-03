@@ -16,15 +16,17 @@
 from __future__ import annotations
 
 import abc
+import numpy as np
 
-from typing import Any, Optional, Mapping, List, cast, Union, Tuple
+from typing import Any, Optional, Mapping, cast, Union, Tuple, Sequence
 
 from pybag.core import BBox
+from pybag.enum import MinLenMode, RoundMode, Direction
 
 from bag.util.immutable import Param
 from bag.layout.template import TemplateDB
 from bag.layout.tech import TechInfo
-from bag.layout.routing.base import WDictType, SpDictType, WireArray
+from bag.layout.routing.base import WDictType, SpDictType, WireArray, TrackID
 from bag.layout.routing.grid import RoutingGrid, TrackSpec
 
 from ..mos.data import MOSType
@@ -37,7 +39,7 @@ class ResBasePlaceInfo(ArrayPlaceInfo):
     def __init__(self, parent_grid: RoutingGrid, wire_specs: Mapping[int, Any],
                  tr_widths: WDictType, tr_spaces: SpDictType, top_layer: int, nx: int, ny: int, *,
                  conn_layer: Optional[int] = None, res_type: str = 'standard', mos_type: str = '',
-                 threshold: str = '', tr_specs: Optional[List[TrackSpec]] = None,
+                 threshold: str = '', tr_specs: Optional[Sequence[TrackSpec]] = None,
                  half_space: bool = True, ext_mode: ExtendMode = ExtendMode.AREA,
                  **kwargs: Any) -> None:
         metal = (res_type == 'metal')
@@ -168,3 +170,166 @@ class ResArrayBase(ArrayBase, abc.ABC):
 
         return self.get_device_port(col_idx, row_idx, bot_port_name), \
             self.get_device_port(col_idx, row_idx, top_port_name)
+
+    def connect_units(self, warrs: Mapping[str, Mapping[int, np.ndarray]], x0: int, x1: int, y0: int, y1: int
+                      ) -> Tuple[WireArray, WireArray]:
+        """Connect all unit resistors to have parallel connection from x0 to x1 and series from y0 to y1.
+        Returns bottom and top vm_layer WireArrays."""
+        hm_layer = self.conn_layer + 1
+        vm_layer = hm_layer + 1
+
+        prev_vm: Optional[WireArray] = None
+        bot_vm: Optional[WireArray] = None
+        top_vm: Optional[WireArray] = None
+        for yidx in range(y0, y1):
+            # parallel connections
+            self.connect_wires(warrs['bot'][hm_layer][x0:x1, yidx].tolist())
+            self.connect_wires(warrs['top'][hm_layer][x0:x1, yidx].tolist())
+
+            _bot_vm = self.connect_wires(warrs['bot'][vm_layer][x0:x1, yidx].tolist())[0]
+            _top_vm = self.connect_wires(warrs['top'][vm_layer][x0:x1, yidx].tolist())[0]
+
+            # series connections
+            if yidx == y0:
+                bot_vm = _bot_vm
+            else:
+                self.connect_wires([_bot_vm, prev_vm])
+
+            if yidx == y1 - 1:
+                top_vm = _top_vm
+            else:
+                prev_vm = _top_vm
+
+        return bot_vm, top_vm
+
+    def connect_dummies(self, warrs: Mapping[str, Mapping[int, np.ndarray]],
+                        bulk_warrs: Mapping[int, Union[WireArray, Sequence[WireArray]]]) -> None:
+        """Connect all the dummy resistors for the case where dummies are on the periphery."""
+        nx = self.place_info.nx
+        ny = self.place_info.ny
+        nx_dum = self.params['nx_dum']
+        ny_dum = self.params['ny_dum']
+
+        hm_layer = self.conn_layer + 1
+        vm_layer = hm_layer + 1
+
+        for yidx in range(ny):
+            for xidx in range(nx):
+                # connect PLUS and MINUS of dummy units to supply connections
+                if xidx < nx_dum or xidx >= (nx - nx_dum) or yidx < nx_dum or yidx >= (ny - ny_dum):
+                    self.connect_to_track_wires(warrs['bot'][vm_layer][xidx, yidx], bulk_warrs[hm_layer][yidx])
+                    self.connect_to_track_wires(warrs['top'][vm_layer][xidx, yidx], bulk_warrs[hm_layer][yidx + 1])
+
+    def connect_bulk_xm(self, warrs: Mapping[int, Sequence[Union[WireArray, Sequence[WireArray]]]]) -> None:
+        """Connect all bulk connections to supply on xm_layer"""
+        # connect bulk vm_layer wires to xm_layer
+        hm_layer = self.conn_layer + 1
+        vm_layer = hm_layer + 1
+        xm_layer = vm_layer + 1
+        top_layer = self.place_info.top_layer
+        assert top_layer == xm_layer, f'Supports only top_layer={xm_layer} for now.'
+        w_sup_xm = self.tr_manager.get_width(xm_layer, 'sup')
+
+        xm_tidx0 = self.grid.coord_to_track(xm_layer, 0, RoundMode.NEAREST)
+        xm_tid0 = TrackID(xm_layer, xm_tidx0, w_sup_xm)
+        bot_xm = self.connect_to_tracks(warrs[vm_layer][0], xm_tid0)
+        xm_tidx1 = self.grid.coord_to_track(xm_layer, self.place_info.ny * self.place_info.height, RoundMode.NEAREST)
+        xm_tid1 = TrackID(xm_layer, xm_tidx1, w_sup_xm)
+        top_xm = self.connect_to_tracks(warrs[vm_layer][1], xm_tid1)
+
+        # Add pins
+        sup_name = 'VDD' if cast(ResBasePlaceInfo, self.place_info).res_config['sub_type_default'] == 'ntap' else 'VSS'
+        self.add_pin(sup_name, [bot_xm, top_xm])
+
+    def connect_hm_vm(self) -> Tuple[Mapping[str, Mapping[int, np.ndarray]],
+                                     Mapping[int, Union[WireArray, Sequence[WireArray]]]]:
+        """Connect all resistor ports on hm_layer and vm_layer. BULK ports are shorted.
+        Returns:
+            1. terms:
+                 top:
+                   hm_layer: numpy array of all top hm_layer wires
+                   vm_layer: numpy array of all top vm_layer wires
+                 bot:
+                   hm_layer: numpy array of all bottom hm_layer wires
+                   vm_layer: numpy array of all bottom vm_layer wires
+            2. bulk_warrs:
+                 hm_layer: WireArray with num >= 1 of all hm_layer bulk wires
+                 vm_layer: [bottom vm_layer WireArray with num >= 1, top vm_layer WireArray with num >= 1]
+        """
+        nx = self.place_info.nx
+        ny = self.place_info.ny
+
+        conn_layer = self.place_info.conn_layer
+        prim_lp = self.grid.tech_info.get_lay_purp_list(conn_layer)[0]
+        hm_layer = conn_layer + 1
+        vm_layer = hm_layer + 1
+        w_sup_hm = self.tr_manager.get_width(hm_layer, 'sup')
+        w_sup_vm = self.tr_manager.get_width(vm_layer, 'sup')
+        w_sig_hm = self.tr_manager.get_width(hm_layer, 'sig')
+        w_sig_vm = self.tr_manager.get_width(vm_layer, 'sig')
+
+        bulk_warrs = {}
+        terms = dict(top={}, bot={})
+        terms['top'][hm_layer] = np.empty((nx, ny), WireArray)
+        terms['top'][vm_layer] = np.empty((nx, ny), WireArray)
+        terms['bot'][hm_layer] = np.empty((nx, ny), WireArray)
+        terms['bot'][vm_layer] = np.empty((nx, ny), WireArray)
+
+        # get hm_layer wires for supply connections
+        unit_h = self.place_info.height
+        hm_warr_list = []
+        for yidx in range(ny + 1):
+            hm_tidx = self.grid.coord_to_track(hm_layer, unit_h * yidx, RoundMode.NEAREST)
+            hm_warr_list.append(self.add_wires(hm_layer, hm_tidx, self.bound_box.xl, self.bound_box.xh, width=w_sup_hm))
+
+        # connect from conn_layer to hm_layer and vm_layer
+        for yidx in range(ny):
+            # get hm_layer wires for signal connections
+            if yidx & 1:
+                top = 'MINUS'
+                bot = 'PLUS'
+            else:
+                top = 'PLUS'
+                bot = 'MINUS'
+
+            for xidx in range(nx):
+                # connect PLUS and MINUS of every resistor unit to hm_layer signal wires
+                bbox_bot = self.get_device_port(xidx, yidx, bot)
+                hm_idx0 = self.grid.coord_to_track(hm_layer, bbox_bot.ym, RoundMode.NEAREST)
+                hm_tid0 = TrackID(hm_layer, hm_idx0, w_sig_hm)
+                hm_warr0 = self.connect_bbox_to_tracks(Direction.LOWER, prim_lp, bbox_bot, hm_tid0,
+                                                       min_len_mode=MinLenMode.MIDDLE)
+                terms['bot'][hm_layer][xidx, yidx] = hm_warr0
+
+                bbox_top = self.get_device_port(xidx, yidx, top)
+                hm_idx1 = self.grid.coord_to_track(hm_layer, bbox_top.ym, RoundMode.NEAREST)
+                hm_tid1 = TrackID(hm_layer, hm_idx1, w_sig_hm)
+                hm_warr1 = self.connect_bbox_to_tracks(Direction.LOWER, prim_lp, bbox_top, hm_tid1,
+                                                       min_len_mode=MinLenMode.MIDDLE)
+                terms['top'][hm_layer][xidx, yidx] = hm_warr1
+
+                # connect to vm_layer signal wires
+                vm_idx = self.grid.coord_to_track(vm_layer, bbox_bot.xm, RoundMode.NEAREST)
+                vm_tid = TrackID(vm_layer, vm_idx, w_sig_vm)
+                terms['bot'][vm_layer][xidx][yidx] = self.connect_to_tracks(hm_warr0, vm_tid,
+                                                                            min_len_mode=MinLenMode.MIDDLE)
+                terms['top'][vm_layer][xidx][yidx] = self.connect_to_tracks(hm_warr1, vm_tid,
+                                                                            min_len_mode=MinLenMode.MIDDLE)
+
+                # connect BULK of every resistor unit, if it exists
+                if self.has_substrate_port:
+                    bulk_bbox = self.get_device_port(xidx, yidx, 'BULK')
+                    self.connect_bbox_to_track_wires(Direction.LOWER, prim_lp, bulk_bbox, hm_warr_list[yidx])
+                    self.connect_bbox_to_track_wires(Direction.LOWER, prim_lp, bulk_bbox, hm_warr_list[yidx + 1])
+
+        # connect bottom and top hm_layer supply wires to vm_layer supply wires
+        vm_tidx0 = self.grid.coord_to_track(vm_layer, 0, RoundMode.NEAREST)
+        vm_tidx1 = self.grid.coord_to_track(vm_layer, self.place_info.width, RoundMode.NEAREST)
+        vm_tid = TrackID(vm_layer, vm_tidx0, w_sup_vm, nx + 1, vm_tidx1 - vm_tidx0)
+        bot_vm = self.connect_to_tracks(hm_warr_list[0], vm_tid, min_len_mode=MinLenMode.MIDDLE)
+        top_vm = self.connect_to_tracks(hm_warr_list[-1], vm_tid, min_len_mode=MinLenMode.MIDDLE)
+
+        bulk_warrs[hm_layer] = self.connect_wires(hm_warr_list)[0]
+        bulk_warrs[vm_layer] = [bot_vm, top_vm]
+
+        return terms, bulk_warrs
