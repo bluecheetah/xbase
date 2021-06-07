@@ -145,6 +145,12 @@ class MOSBase(TemplateBase, abc.ABC):
         return self.tech_cls.sub_sep_col
 
     @property
+    def gr_sub_sep_col(self) -> int:
+        """int: column separation needed between guard ring substrate and inner substrate.
+        """
+        return self.tech_cls.gr_sub_sep_col
+
+    @property
     def min_sub_col(self) -> int:
         """int: Minimum number of fingers for substrate contact."""
         return self.tech_cls.min_sub_col

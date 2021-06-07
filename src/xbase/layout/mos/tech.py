@@ -106,6 +106,12 @@ class MOSTech(abc.ABC):
         raise NotImplementedError('Not implemented')
 
     @property
+    def gr_sub_sep_col(self) -> int:
+        """int: column separation needed between guard ring substrate and inner substrate.
+        """
+        return self.sub_sep_col
+
+    @property
     @abc.abstractmethod
     def min_sub_col(self) -> int:
         raise NotImplementedError('Not implemented')
