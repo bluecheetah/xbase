@@ -138,8 +138,9 @@ class GuardRing(MOSBase):
             vdd_hm_list = []
             vss_hm_list = []
             for ridx in range(cur_pinfo.num_rows):
-                row_type = cur_pinfo.get_row_place_info(ridx).row_info.row_type
-                if row_type.is_substrate:
+                row_info = cur_pinfo.get_row_place_info(ridx).row_info
+                row_type = row_info.row_type
+                if row_type.is_substrate and row_info.guard_ring:
                     tid = self.get_track_id(ridx, MOSWireType.DS, 'guard', tile_idx=tile_idx)
                     sub = self.add_substrate_contact(ridx, 0, tile_idx=tile_idx, seg=ncol)
                     warr = self.connect_to_tracks(sub, tid)
@@ -153,7 +154,10 @@ class GuardRing(MOSBase):
                         vdd_hm_keys.append(coord)
                         vdd_hm_dict[coord] = warr
                 else:
-                    sub_type = nmos_sub_type if row_type.is_n_plus else pmos_sub_type
+                    if row_type.is_substrate:
+                        sub_type = pmos_sub_type if row_type.is_n_plus else nmos_sub_type
+                    else:
+                        sub_type = nmos_sub_type if row_type.is_n_plus else pmos_sub_type
                     sub0 = self.add_substrate_contact(ridx, 0, tile_idx=tile_idx, seg=edge_ncol,
                                                       guard_ring=True, sub_type=sub_type)
                     sub1 = self.add_substrate_contact(ridx, ncol, tile_idx=tile_idx, seg=edge_ncol,
@@ -193,6 +197,10 @@ class GuardRing(MOSBase):
             ridx = tinfo.num_rows - 1 if flip else 0
 
         mos_type = tinfo.get_row_place_info(ridx).row_info.row_type
+        # if mos_type.is_substrate:
+        #     raise ValueError('top and bottom row must be transistor row.')
+        # return self.params['nmos_gr'] if mos_type.is_n_plus else self.params['pmos_gr']
         if mos_type.is_substrate:
-            raise ValueError('top and bottom row must be transistor row.')
-        return self.params['nmos_gr'] if mos_type.is_n_plus else self.params['pmos_gr']
+            return self.params['pmos_gr'] if mos_type.is_n_plus else self.params['nmos_gr']
+        else:
+            return self.params['nmos_gr'] if mos_type.is_n_plus else self.params['pmos_gr']
