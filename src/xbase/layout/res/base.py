@@ -375,7 +375,7 @@ class ResArrayBase(ArrayBase, abc.ABC):
                         ) -> Union[WireArray, Sequence[WireArray]]:
         """Connects a single or list of resistor port from conn_layer to hm_layer
         By default, hm wire will be (nearest) centered to the port. If
-        the port needs to be moved, use the adjust port.
+        the port needs to be moved, use the adjust option.
 
         Parameters:
         ----------------------
