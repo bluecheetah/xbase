@@ -22,7 +22,7 @@ from ..enum import MOSPortType, MOSType
 from ..data import draw_layout_in_template
 
 from .tech import MOSTech
-from .data import MOSEdgeInfo, RowExtInfo, BlkExtInfo, MOSRowInfo
+from .data import MOSEdgeInfo, RowExtInfo, BlkExtInfo, MOSRowInfo, MOSLayInfo
 
 
 class MOSConn(TemplateBase):
@@ -95,7 +95,7 @@ class MOSConn(TemplateBase):
         tech_cls: MOSTech = grid.tech_info.get_device_tech('mos', lch=row_info.lch,
                                                            arr_options=arr_options)
 
-        mos_info = tech_cls.get_mos_conn_info(row_info, conn_layer, seg, w, stack, g_on_s, options)
+        mos_info: MOSLayInfo = tech_cls.get_mos_conn_info(row_info, conn_layer, seg, w, stack, g_on_s, options)
         draw_layout_in_template(self, mos_info.lay_info)
 
         g_conn_y = row_info.g_conn_y
