@@ -21,8 +21,8 @@ from enum import IntEnum
 
 from typing import Any, Optional, Mapping, cast, Union, Tuple, Sequence
 
-from pybag.core import BBox
-from pybag.enum import MinLenMode, RoundMode, Direction
+from pybag.core import BBox, Transform
+from pybag.enum import MinLenMode, RoundMode, Direction, Orientation
 
 from bag.util.immutable import Param
 from bag.layout.template import TemplateDB
@@ -150,6 +150,26 @@ class ResArrayBase(ArrayBase, abc.ABC):
 
         super().draw_base(pinfo)
         return pinfo
+
+    def get_res_bbox(self, row_idx: int, col_idx: int) -> BBox:
+        """Returns the bounding box of the given resistor."""
+        # TODO: fix this
+        x0, y0 = 0, 0  # self._core_offset
+        xp, yp = self.place_info.width, self.place_info.height
+        x0 += xp * col_idx
+        y0 += yp * row_idx
+        return BBox(x0, y0, x0 + xp, y0 + yp)
+
+    def _get_transform(self, _xidx, _yidx):
+        # Get transform for a given core cell. Useful for transforming ports
+        w = self._info.width
+        h = self._info.height
+        orient = Orientation.R0
+
+        dx = w * _xidx
+        dy = h * _yidx
+
+        return Transform(dx, dy, orient)
 
     def get_res_ports(self, row_idx: int, col_idx: int,
                       top_port_name: str = "PLUS", bot_port_name: str = 'MINUS'
@@ -349,3 +369,43 @@ class ResArrayBase(ArrayBase, abc.ABC):
         bulk_warrs[vm_layer] = [bot_vm, top_vm]
 
         return terms, bulk_warrs
+
+    def connect_port_hm(self, port: Union[WireArray, BBox,
+                                          Sequence[WireArray, BBox]], adjust: int = 0
+                        ) -> Union[WireArray, Sequence[WireArray]]:
+        """Connects a single or list of resistor port from conn_layer to hm_layer
+        By default, hm wire will be (nearest) centered to the port. If
+        the port needs to be moved, use the adjust option.
+
+        Parameters:
+        ----------------------
+        port: Union[WireArray, BBox, Sequence[WireArray, BBox]]
+            Port in question, on conn_layer
+            If a sequence of ports is passed in, function is called on each one
+
+        adjust: int
+            If given, this parameter is passed to get_next_track to get
+            the track id `adjust` tracks away.
+
+        Returns the WireArray or list of WireArrays on hm_layer
+        """
+        if isinstance(port, Sequence):
+            return [self.connect_port_hm(p, adjust) for p in port]
+
+        conn_layer = self.place_info.conn_layer
+        prim_lp = self.grid.tech_info.get_lay_purp_list(conn_layer)[0]
+        hm_layer = conn_layer + 1
+        w_sig_hm = self.tr_manager.get_width(hm_layer, 'sig')
+
+        wire_bbox: BBox = port if isinstance(port, BBox) else port.bound_box
+        bbox_ym = wire_bbox.ym
+        near_tidx = self.grid.coord_to_track(hm_layer, bbox_ym, RoundMode.NEAREST)
+        if adjust:
+            near_tidx = self.tr_manager.get_next_track(hm_layer, near_tidx, 'sig', 'sig', up=adjust)
+        port_tid = TrackID(hm_layer, near_tidx, w_sig_hm)
+        if isinstance(port, BBox):
+            port_hm = self.connect_bbox_to_tracks(Direction.LOWER, prim_lp, wire_bbox, port_tid)
+        else:
+            port_hm = self.connect_to_tracks(port, port_tid)
+
+        return port_hm
