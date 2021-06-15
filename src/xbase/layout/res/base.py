@@ -236,7 +236,7 @@ class ResArrayBase(ArrayBase, abc.ABC):
         vm_layer = hm_layer + 1
         xm_layer = vm_layer + 1
         top_layer = self.place_info.top_layer
-        assert top_layer == xm_layer, f'Supports only top_layer={xm_layer} for now.'
+        assert top_layer >= xm_layer, f'top_layer={top_layer} must be greater than {xm_layer}.'
         w_sup_xm = self.tr_manager.get_width(xm_layer, 'sup')
 
         xm_tidx0 = self.grid.coord_to_track(xm_layer, 0, RoundMode.NEAREST)
@@ -250,8 +250,8 @@ class ResArrayBase(ArrayBase, abc.ABC):
         sup_name = 'VDD' if cast(ResBasePlaceInfo, self.place_info).res_config['sub_type_default'] == 'ntap' else 'VSS'
         self.add_pin(sup_name, [bot_xm, top_xm])
 
-    def connect_hm_vm(self) -> Tuple[Mapping[int, Mapping[ResTermType, np.ndarray]],
-                                     Mapping[int, Union[WireArray, Sequence[WireArray]]]]:
+    def connect_hm_vm(self, sig_type: str = 'sig') -> Tuple[Mapping[int, Mapping[ResTermType, np.ndarray]],
+                                                            Mapping[int, Union[WireArray, Sequence[WireArray]]]]:
         """Connect all resistor ports on hm_layer and vm_layer. BULK ports are shorted.
         Returns:
             1. terms:
@@ -274,8 +274,8 @@ class ResArrayBase(ArrayBase, abc.ABC):
         vm_layer = hm_layer + 1
         w_sup_hm = self.tr_manager.get_width(hm_layer, 'sup')
         w_sup_vm = self.tr_manager.get_width(vm_layer, 'sup')
-        w_sig_hm = self.tr_manager.get_width(hm_layer, 'sig')
-        w_sig_vm = self.tr_manager.get_width(vm_layer, 'sig')
+        w_sig_hm = self.tr_manager.get_width(hm_layer, sig_type)
+        w_sig_vm = self.tr_manager.get_width(vm_layer, sig_type)
 
         bulk_warrs = {}
         # Use numpy 2D arrays to support index slicing in self.connect_units() and easy conversion to list for passing
