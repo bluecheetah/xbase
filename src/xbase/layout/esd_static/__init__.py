@@ -99,7 +99,7 @@ class ESDStatic(TemplateBase):
         vm_l_idx = self.grid.coord_to_track(port_layer, hm_lower, RoundMode.GREATER_EQ)
         vm_r_idx = self.grid.coord_to_track(port_layer, hm_upper, RoundMode.LESS_EQ)
         vm_num = tr_manager.get_num_wires_between(port_layer, 'sup', vm_l_idx, 'sup', vm_r_idx, 'sup')
-        if vm_num < 3:
+        if vm_num < 1:
             raise ValueError(f'Redo routing on port_layer={port_layer}')
         vm_idx_list = tr_manager.spread_wires(port_layer, ['sup', 'sup', 'sup'], vm_l_idx, vm_r_idx,
                                               ('sup', 'sup'))
@@ -125,6 +125,12 @@ class ESDStatic(TemplateBase):
         self.add_pin(sup_name, self.extend_wires(sup_vm, lower=vm_lower, upper=vm_upper))
         self.add_pin('plus', self.extend_wires(plus_vm, lower=vm_lower, upper=vm_upper))
         self.add_pin('minus', self.extend_wires(minus_vm, lower=vm_lower, upper=vm_upper))
+
+        # add hidden pins on unconnected used_port_layer wires for collision checking in top level cells
+        nc_hm: Sequence[BBox] = inst.get_all_port_pins('NC', used_port_layer)
+        for bbox in nc_hm:
+            self.add_rect(hm_lp, bbox)
+            self.add_pin_primitive('NC', f'{used_port_layer}', bbox, hide=True)
 
         # setup schematic parameters
         self.sch_params = dict(
