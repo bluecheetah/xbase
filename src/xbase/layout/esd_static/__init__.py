@@ -66,7 +66,33 @@ class ESDStatic(TemplateBase):
 
         # add instance
         inst = self.add_instance(master, inst_name='XINST')
-        self.set_size_from_bound_box(top_layer, inst.bound_box, round_up=True)
+        bbox = inst.bound_box
+        self.set_size_from_bound_box(top_layer, bbox, round_up=True)
+
+        # add rectangle arrays, if any
+        rect_arr_list: Sequence[Mapping[str, Any]] = esd_info['rect_arr_list']
+        for rect_arr in rect_arr_list:
+            edge_margin: Mapping[str, int] = rect_arr.get('edge_margin', {})
+            rect_xl = bbox.xl + edge_margin.get('xl', 0)
+            rect_xh = bbox.xh + edge_margin.get('xh', 0)
+            rect_yl = bbox.yl + edge_margin.get('yl', 0)
+            rect_yh = bbox.yh + edge_margin.get('yh', 0)
+            spx: int = rect_arr.get('spx', 0)
+            if spx == 0:
+                num_x = 1
+            else:
+                w_unit: int = rect_arr['w_unit']
+                num_x = (rect_xh - rect_xl - w_unit) // spx + 1
+                rect_xh = rect_xl + w_unit
+            spy: int = rect_arr.get('spy', 0)
+            if spy == 0:
+                num_y = 1
+            else:
+                h_unit: int = rect_arr['h_unit']
+                num_y = (rect_yh - rect_yl - h_unit) // spy + 1
+                rect_yh = rect_yl + h_unit
+            lp: Tuple[str, str] = rect_arr['lay_purp']
+            self.add_rect_array(lp, BBox(rect_xl, rect_yl, rect_xh, rect_yh), num_x, num_y, spx, spy)
 
         # --- Routing --- #
         # using hm for lower layer and vm for higher layer just for convenience.
