@@ -331,14 +331,14 @@ class ResArrayBase(ArrayBase, abc.ABC):
             for xidx in range(nx):
                 # connect PLUS and MINUS of every resistor unit to hm_layer signal wires
                 bbox_bot = self.get_device_port(xidx, yidx, bot)
-                hm_idx0 = self.grid.coord_to_track(hm_layer, bbox_bot.ym, RoundMode.NEAREST)
+                hm_idx0 = self.grid.coord_to_track(hm_layer, bbox_bot.yl, RoundMode.NEAREST)
                 hm_tid0 = TrackID(hm_layer, hm_idx0, w_sig_hm)
                 hm_warr0 = self.connect_bbox_to_tracks(Direction.LOWER, prim_lp, bbox_bot, hm_tid0,
                                                        min_len_mode=MinLenMode.MIDDLE)
                 terms[hm_layer][ResTermType.BOT][xidx, yidx] = hm_warr0
 
                 bbox_top = self.get_device_port(xidx, yidx, top)
-                hm_idx1 = self.grid.coord_to_track(hm_layer, bbox_top.ym, RoundMode.NEAREST)
+                hm_idx1 = self.grid.coord_to_track(hm_layer, bbox_top.yh, RoundMode.NEAREST)
                 hm_tid1 = TrackID(hm_layer, hm_idx1, w_sig_hm)
                 hm_warr1 = self.connect_bbox_to_tracks(Direction.LOWER, prim_lp, bbox_top, hm_tid1,
                                                        min_len_mode=MinLenMode.MIDDLE)
