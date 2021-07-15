@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Tuple, Iterable, Union, Any
+from typing import Tuple, Iterable, Union, Any, Optional, Mapping
 
 from dataclasses import dataclass
 
@@ -63,11 +63,26 @@ class ViaInfo:
 
 
 @dataclass(eq=True, frozen=True)
+class InstInfo:
+    """The primitive instance information object."""
+    lib_name: str
+    cell_name: str
+    xform: Optional[Transform] = None
+    nx: int = 1
+    ny: int = 1
+    spx: int = 0
+    spy: int = 0
+    params: Optional[Mapping[str, Any]] = None
+    commit: bool = True
+
+
+@dataclass(eq=True, frozen=True)
 class LayoutInfo:
     """The layout information object."""
     rect_dict: ImmutableSortedDict[Tuple[str, str], BBoxCollection]
     warr_list: ImmutableList[WireArrayInfo]
     via_list: ImmutableList[ViaInfo]
+    inst_list: ImmutableList[InstInfo]
     bound_box: BBox
 
 
@@ -76,6 +91,7 @@ class LayoutInfoBuilder:
         self._lp_dict = {}
         self._via_list = []
         self._warr_list = []
+        self._inst_list = []
 
     def add_rect_arr(self, key: Tuple[str, str], box: BBox,
                      nx: int = 1, ny: int = 1, spx: int = 0, spy: int = 0) -> None:
@@ -100,9 +116,14 @@ class LayoutInfoBuilder:
         for box in rect_iter:
             r_list.add_rect_arr(box)
 
+    def add_instance_primitive(self, lib_name: str, cell_name: str, *, xform: Optional[Transform] = None,
+                               nx: int = 1, ny: int = 1, spx: int = 0, spy: int = 0,
+                               params: Optional[Mapping[str, Any]] = None, commit: bool = True) -> None:
+        self._inst_list.append(InstInfo(lib_name, cell_name, xform, nx, ny, spx, spy, params, commit))
+
     def get_info(self, bnd_box: BBox) -> LayoutInfo:
         return LayoutInfo(ImmutableSortedDict(self._lp_dict), ImmutableList(self._warr_list),
-                          ImmutableList(self._via_list), bnd_box)
+                          ImmutableList(self._via_list), ImmutableList(self._inst_list), bnd_box)
 
 
 def draw_layout_in_template(template: TemplateBase, lay_info: LayoutInfo,
@@ -120,6 +141,11 @@ def draw_layout_in_template(template: TemplateBase, lay_info: LayoutInfo,
                                    sp_rows=vinfo.vspy, sp_cols=vinfo.vspx, enc1=vinfo.enc1,
                                    enc2=vinfo.enc2, nx=vinfo.nx, ny=vinfo.ny, spx=vinfo.spx,
                                    spy=vinfo.spy, priority=vinfo.priority)
+
+    for inst_info in lay_info.inst_list:
+        template.add_instance_primitive(inst_info.lib_name, inst_info.cell_name, xform=inst_info.xform,
+                                        nx=inst_info.nx, ny=inst_info.ny, spx=inst_info.spx, spy=inst_info.spy,
+                                        params=inst_info.params, commit=inst_info.commit)
 
     if set_bbox:
         template.prim_bound_box = lay_info.bound_box
