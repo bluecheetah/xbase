@@ -328,24 +328,26 @@ class ResArrayBase(ArrayBase, abc.ABC):
                 top = 'PLUS'
                 bot = 'MINUS'
 
+            bbox_bot = self.get_device_port(0, yidx, bot)
+            hm_idx0 = self.grid.coord_to_track(hm_layer, bbox_bot.yl, RoundMode.NEAREST)
+            hm_tid0 = TrackID(hm_layer, hm_idx0, w_sig_hm)
+
+            bbox_top = self.get_device_port(0, yidx, top)
+            hm_idx1 = self.grid.coord_to_track(hm_layer, bbox_top.yh, RoundMode.NEAREST)
+            hm_tid1 = TrackID(hm_layer, hm_idx1, w_sig_hm)
+
             for xidx in range(nx):
                 # connect PLUS and MINUS of every resistor unit to hm_layer signal wires
-                bbox_bot = self.get_device_port(xidx, yidx, bot)
-                hm_idx0 = self.grid.coord_to_track(hm_layer, bbox_bot.yl, RoundMode.NEAREST)
-                hm_tid0 = TrackID(hm_layer, hm_idx0, w_sig_hm)
-                hm_warr0 = self.connect_bbox_to_tracks(Direction.LOWER, prim_lp, bbox_bot, hm_tid0,
-                                                       min_len_mode=MinLenMode.MIDDLE)
+                hm_warr0 = self.connect_bbox_to_tracks(Direction.LOWER, prim_lp, self.get_device_port(xidx, yidx, bot),
+                                                       hm_tid0, min_len_mode=MinLenMode.MIDDLE)
                 terms[hm_layer][ResTermType.BOT][xidx, yidx] = hm_warr0
 
-                bbox_top = self.get_device_port(xidx, yidx, top)
-                hm_idx1 = self.grid.coord_to_track(hm_layer, bbox_top.yh, RoundMode.NEAREST)
-                hm_tid1 = TrackID(hm_layer, hm_idx1, w_sig_hm)
-                hm_warr1 = self.connect_bbox_to_tracks(Direction.LOWER, prim_lp, bbox_top, hm_tid1,
-                                                       min_len_mode=MinLenMode.MIDDLE)
+                hm_warr1 = self.connect_bbox_to_tracks(Direction.LOWER, prim_lp, self.get_device_port(xidx, yidx, top),
+                                                       hm_tid1, min_len_mode=MinLenMode.MIDDLE)
                 terms[hm_layer][ResTermType.TOP][xidx, yidx] = hm_warr1
 
                 # connect to vm_layer signal wires
-                vm_idx = self.grid.coord_to_track(vm_layer, bbox_bot.xm, RoundMode.NEAREST)
+                vm_idx = self.grid.coord_to_track(vm_layer, hm_warr0.middle, RoundMode.NEAREST)
                 vm_tid = TrackID(vm_layer, vm_idx, w_sig_vm)
                 vm_warr0 = self.connect_to_tracks(hm_warr0, vm_tid, min_len_mode=MinLenMode.MIDDLE)
                 terms[vm_layer][ResTermType.BOT][xidx, yidx] = vm_warr0
