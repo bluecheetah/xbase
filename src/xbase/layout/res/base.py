@@ -249,7 +249,8 @@ class ResArrayBase(ArrayBase, abc.ABC):
                     self.connect_to_track_wires(warrs[vm_layer][ResTermType.TOP][xidx, yidx],
                                                 bulk_warrs[hm_layer][yidx + 1])
 
-    def connect_bulk_xm(self, warrs: Mapping[int, Sequence[Union[WireArray, Sequence[WireArray]]]]) -> None:
+    def connect_bulk_xm(self, warrs: Mapping[int, Sequence[Union[WireArray, Sequence[WireArray]]]]
+                        ) -> Tuple[WireArray, WireArray]:
         """Connect all bulk connections to supply on xm_layer"""
         # connect bulk vm_layer wires to xm_layer
         hm_layer = self.conn_layer + 1
@@ -269,6 +270,7 @@ class ResArrayBase(ArrayBase, abc.ABC):
         # Add pins
         sup_name = 'VDD' if cast(ResBasePlaceInfo, self.place_info).res_config['sub_type_default'] == 'ntap' else 'VSS'
         self.add_pin(sup_name, [bot_xm, top_xm])
+        return bot_xm, top_xm
 
     def connect_hm_vm(self, sig_type: str = 'sig') -> Tuple[Mapping[int, Mapping[ResTermType, np.ndarray]],
                                                             Mapping[int, Union[WireArray, Sequence[WireArray]]]]:
