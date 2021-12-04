@@ -17,7 +17,6 @@
 
 from typing import Any, Dict, Optional, Type
 
-from bag.design.database import ModuleDB
 from bag.design.module import Module
 from bag.util.immutable import Param
 from bag.layout.template import TemplateDB
@@ -27,6 +26,8 @@ from .placement.data import MOSArrayPlaceInfo, make_pinfo_compact
 from .data import MOSRowSpecs
 from .base import MOSBase
 from .top import MOSBaseWrapper
+
+from ...schematic.mos_char import xbase__mos_char
 
 
 class MOSCharCore(MOSBase):
@@ -38,8 +39,7 @@ class MOSCharCore(MOSBase):
 
     @classmethod
     def get_schematic_class(cls) -> Optional[Type[Module]]:
-        # noinspection PyTypeChecker
-        return ModuleDB.get_schematic_class('xbase', 'mos_char')
+        return xbase__mos_char
 
     @classmethod
     def get_params_info(cls) -> Dict[str, str]:
