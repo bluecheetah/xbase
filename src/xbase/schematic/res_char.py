@@ -67,8 +67,12 @@ class xbase__res_char(Module):
             unit_params='Parameters for resistor unit',
             nser='Number of resistor units in series',
             npar='Number of resistor units in parallel',
-            sub_type='"ntap" or "ptap"',
+            sub_type='"ntap" or "ptap" or ""',
         )
+
+    @classmethod
+    def get_default_param_values(cls) -> Mapping[str, Any]:
+        return dict(sub_type='')
 
     def design(self, unit_params: Mapping[str, Any], nser: int, npar: int, sub_type: str) -> None:
         """To be overridden by subclasses to design this module.
@@ -89,4 +93,6 @@ class xbase__res_char(Module):
         if sub_type == 'ntap':
             self.reconnect_instance_terminal('XRES', 'BULK', 'VDD')
             self.rename_pin('VSS', 'VDD')
+        elif sub_type == '':
+            self.remove_pin('VSS')
         self.design_resistor('XRES', unit_params, nser, npar, mid='mid')
