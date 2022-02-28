@@ -368,6 +368,7 @@ class ResArrayBase(ArrayBase, abc.ABC):
         vm_tid = TrackID(vm_layer, vm_tidx0, w_sup_vm, nx + 1, vm_tidx1 - vm_tidx0)
         bot_vm = self.connect_to_tracks(hm_warr_list[0], vm_tid, min_len_mode=MinLenMode.MIDDLE)
         top_vm = self.connect_to_tracks(hm_warr_list[-1], vm_tid, min_len_mode=MinLenMode.MIDDLE)
+        self.connect_to_track_wires(hm_warr_list, [bot_vm[0], top_vm[0], bot_vm[-1], top_vm[-1]])
 
         bulk_warrs[hm_layer] = self.connect_wires(hm_warr_list)[0]
         bulk_warrs[vm_layer] = [bot_vm, top_vm]
