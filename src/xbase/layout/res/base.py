@@ -243,7 +243,7 @@ class ResArrayBase(ArrayBase, abc.ABC):
         for yidx in range(ny):
             for xidx in range(nx):
                 # connect PLUS and MINUS of dummy units to supply connections
-                if xidx < nx_dum or xidx >= (nx - nx_dum) or yidx < nx_dum or yidx >= (ny - ny_dum):
+                if xidx < nx_dum or xidx >= (nx - nx_dum) or yidx < ny_dum or yidx >= (ny - ny_dum):
                     self.connect_to_track_wires(warrs[vm_layer][ResTermType.BOT][xidx, yidx],
                                                 bulk_warrs[hm_layer][yidx])
                     self.connect_to_track_wires(warrs[vm_layer][ResTermType.TOP][xidx, yidx],
