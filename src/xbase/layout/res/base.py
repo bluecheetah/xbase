@@ -57,6 +57,8 @@ class ResBasePlaceInfo(ArrayPlaceInfo):
             mos_type = tech_cls.mos_type_default
         if not threshold:
             threshold = tech_cls.threshold_default
+        if 'res_type' in kwargs['unit_specs']['params']:
+            res_type = kwargs['unit_specs']['params']['res_type']
 
         ArrayPlaceInfo.__init__(self, parent_grid, wire_specs, tr_widths, tr_spaces, top_layer,
                                 nx, ny, tech_cls, conn_layer=conn_layer, tr_specs=tr_specs,
