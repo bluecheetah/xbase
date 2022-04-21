@@ -59,7 +59,10 @@ class RowPlaceSpecs:
                  bot_conn_y_table: Mapping[MOSWireType, Tuple[int, int]],
                  top_conn_y_table: Mapping[MOSWireType, Tuple[int, int]],
                  bot_ext_info: RowExtInfo, top_ext_info: RowExtInfo,
-                 mid_conn_y_table: Optional[Mapping[MOSWireType, Tuple[int, int]]] = {}):
+                 mid_conn_y_table: Optional[Mapping[MOSWireType, Tuple[int, int]]] = None):
+        if not mid_conn_y_table:
+            mid_conn_y_table = {}
+
         # work around: this is how you set attributes for frozen data classes
         object.__setattr__(self, 'row_specs', row_specs)
         object.__setattr__(self, 'row_info', row_info)
@@ -306,9 +309,9 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
 
             if mid_wg:
                 mid_wg.place_compact(hm_layer, tr_manager,
-                                    pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
-                                    prev_wg=prev_wg, #top_mirror=top_mirror and is_top_row,)
-                                    ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_mid[1]))
+                                     pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
+                                     prev_wg=prev_wg, #top_mirror=top_mirror and is_top_row,)
+                                     ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_mid[1]))
                 prev_wg = mid_wg
             
             # place top wires above the middle wires
@@ -322,9 +325,9 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
 
             if top_wg:
                 top_wg.place_compact(hm_layer, tr_manager,
-                                    pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
-                                    prev_wg=prev_wg, #top_mirror=top_mirror and is_top_row,
-                                    ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_top[1]))
+                                     pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
+                                     prev_wg=prev_wg, #top_mirror=top_mirror and is_top_row,
+                                     ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_top[1]))
                 prev_wg = top_wg
             
             bnd_table = top_wg.get_placement_bounds(hm_layer, grid)
@@ -345,9 +348,9 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
 
             if top_wg:
                 top_wg.place_compact(hm_layer, tr_manager,
-                                    pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
-                                    prev_wg=prev_wg, top_mirror=top_mirror and is_top_row,
-                                    ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_top[1]))
+                                     pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
+                                     prev_wg=prev_wg, top_mirror=top_mirror and is_top_row,
+                                     ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_top[1]))
                 if row_info.row_type.is_substrate:
                     top_wg.align_wires(hm_layer, tr_manager, ytop_prev, ycur + blk_h, top_pcons=None)
 

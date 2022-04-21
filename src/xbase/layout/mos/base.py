@@ -162,7 +162,7 @@ class MOSBase(TemplateBase, abc.ABC):
 
     @property
     def can_draw_double_gate(self) -> bool:
-        """bool: True if you can short adjacent transistor ports using hm_layer."""
+        """bool: True if double gates are supported."""
         return self.tech_cls.can_draw_double_gate
 
     def draw_base(self, obj: Union[MOSBasePlaceInfo,
@@ -378,8 +378,9 @@ class MOSBase(TemplateBase, abc.ABC):
 
         # construct port object
         m_pin = inst.get_pin('m') if inst.has_port('m') else None
+        g_pin = inst.get_pin('g') if inst.has_port('g') else None
         g2_pin = inst.get_pin('g2') if inst.has_port('g2') else None
-        return MOSPorts(inst.get_pin('g'), inst.get_pin('d'), inst.get_pin('s'),
+        return MOSPorts(g_pin, inst.get_pin('d'), inst.get_pin('s'),
                         master.shorted_ports, m=m_pin, g2=g2_pin)
 
     def add_nand2(self, row_idx: int, col_idx: int, seg: int, *, tile_idx: int = 0, w: int = 0,
