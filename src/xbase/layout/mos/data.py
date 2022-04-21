@@ -31,20 +31,23 @@ from ..enum import MOSType, MOSWireType, MOSPortType, Alignment
 
 @dataclass(eq=True, frozen=True, init=False)
 class MOSRowSpecs:
-    """specification for a transistor row."""
+    """specification for a transistor row. Includes unit transistor dimensions and wire info
+    for determining track locations on conn_layer + 1"""
     mos_type: MOSType
     width: int
     threshold: str
     bot_wires: WireData
+    mid_wires: WireData
     top_wires: WireData
     options: ImmutableSortedDict[str, Any]
     flip: bool
     sub_width: int
+    double_gate: bool
 
     def __init__(self, mos_type: MOSType, width: int, threshold: str,
-                 bot_wires: WireData, top_wires: WireData,
+                 bot_wires: WireData, top_wires: WireData, mid_wires: Optional[WireData] = None,
                  options: Optional[Mapping[str, Any]] = None,
-                 flip: bool = False, sub_width: int = 0) -> None:
+                 flip: bool = False, sub_width: int = 0, double_gate: bool = False) -> None:
         if sub_width == 0 or mos_type.is_substrate:
             sub_width = width
 
@@ -53,10 +56,12 @@ class MOSRowSpecs:
         object.__setattr__(self, 'width', width)
         object.__setattr__(self, 'threshold', threshold)
         object.__setattr__(self, 'bot_wires', bot_wires)
+        object.__setattr__(self, 'mid_wires', mid_wires)
         object.__setattr__(self, 'top_wires', top_wires)
         object.__setattr__(self, 'options', ImmutableSortedDict(options))
         object.__setattr__(self, 'flip', flip)
         object.__setattr__(self, 'sub_width', sub_width)
+        object.__setattr__(self, 'double_gate', double_gate)
 
     @classmethod
     def make_row_specs(cls, val: Mapping[str, Any]) -> MOSRowSpecs:
@@ -64,23 +69,36 @@ class MOSRowSpecs:
         width = val['width']
         threshold = val['threshold']
         bot_wires = val['bot_wires']
+        mid_wires = val.get('mid_wires')
         top_wires = val['top_wires']
         options = val.get('options', None)
         flip = val.get('flip', False)
         sub_width = val.get('sub_width', 0)
+        double_gate = val.get('double_gate', False)
 
-        ds_type = MOSWireType.DS_GATE.name
-        g_type = MOSWireType.G.name
-        if flip:
-            bot_ptype = ds_type
-            top_ptype = g_type
+        if double_gate:
+            ds_type = MOSWireType.DS.name
+            g_type = MOSWireType.G.name
+            g2_type = MOSWireType.G2.name
+            bot_wd = WireData.make_wire_data(bot_wires, Alignment.UPPER_COMPACT, g_type)
+            mid_wd = WireData.make_wire_data(mid_wires, Alignment.CENTER_COMPACT, ds_type)
+            top_wd = WireData.make_wire_data(top_wires, Alignment.LOWER_COMPACT, g2_type)
+            return MOSRowSpecs(mos_type, width, threshold, bot_wd, top_wd, mid_wires=mid_wd,
+                               options=options, flip=flip, sub_width=sub_width, double_gate=double_gate)
         else:
-            bot_ptype = g_type
-            top_ptype = ds_type
-        bot_wd = WireData.make_wire_data(bot_wires, Alignment.UPPER_COMPACT, bot_ptype)
-        top_wd = WireData.make_wire_data(top_wires, Alignment.LOWER_COMPACT, top_ptype)
-        return MOSRowSpecs(mos_type, width, threshold, bot_wd, top_wd,
-                           options=options, flip=flip, sub_width=sub_width)
+            ds_type = MOSWireType.DS_GATE.name
+            g_type = MOSWireType.G.name
+            if flip:
+                bot_ptype = ds_type
+                top_ptype = g_type
+            else:
+                bot_ptype = g_type
+                top_ptype = ds_type
+            bot_wd = WireData.make_wire_data(bot_wires, Alignment.UPPER_COMPACT, bot_ptype)
+            mid_wd = WireData.make_wire_data({'data': []}, Alignment.CENTER_COMPACT, bot_ptype)
+            top_wd = WireData.make_wire_data(top_wires, Alignment.LOWER_COMPACT, top_ptype)
+            return MOSRowSpecs(mos_type, width, threshold, bot_wd, top_wd, mid_wires=mid_wd,
+                               options=options, flip=flip, sub_width=sub_width, double_gate=double_gate)
 
     @property
     def ignore_bot_vm_sp_le(self) -> bool:
@@ -191,6 +209,7 @@ class MOSRowInfo:
     top_ext_info: RowExtInfo
     bot_ext_info: RowExtInfo
     info: ImmutableSortedDict[str, Any]
+    # yt, yb for each connection
     g_conn_y: Tuple[int, int] = (0, 0)
     g_m_conn_y: Tuple[int, int] = (0, 0)
     ds_conn_y: Tuple[int, int] = (0, 0)
@@ -198,6 +217,9 @@ class MOSRowInfo:
     ds_g_conn_y: Tuple[int, int] = (0, 0)
     sub_conn_y: Tuple[int, int] = (0, 0)
     guard_ring: bool = False
+    double_gate: bool = False
+    g2_conn_y: Tuple[int, int] = (0, 0)
+    g2_m_conn_y: Tuple[int, int] = (0, 0)
 
     @classmethod
     def from_dict(cls, table: Mapping[str, Any]) -> MOSRowInfo:
@@ -210,7 +232,10 @@ class MOSRowInfo:
                           top_ext_info, bot_ext_info, ImmutableSortedDict(table['info']),
                           table['g_conn_y'], table['g_m_conn_y'], table['ds_conn_y'],
                           table['ds_m_conn_y'], table['ds_g_conn_y'], table['sub_conn_y'],
-                          guard_ring=table.get('guard_ring', False))
+                          guard_ring=table.get('guard_ring', False),
+                          double_gate=table.get('double_gate', False),
+                          g2_conn_y=table.get('g2_conn_y', (0,0)),
+                          g2_m_conn_y=table.get('g2_m_conn_y', (0,0)))
 
     @property
     def bot_conn_types(self) -> Sequence[MOSWireType]:
@@ -219,6 +244,8 @@ class MOSRowInfo:
         index 0 is the default type.
         """
         if self.flip:
+            if self.double_gate:
+                return MOSWireType.G2, MOSWireType.G2_MATCH
             return MOSWireType.DS_GATE, MOSWireType.DS, MOSWireType.DS_MATCH
         else:
             return MOSWireType.G, MOSWireType.G_MATCH
@@ -232,7 +259,22 @@ class MOSRowInfo:
         if self.flip:
             return MOSWireType.G, MOSWireType.G_MATCH
         else:
+            if self.double_gate:
+                return MOSWireType.G2, MOSWireType.G2_MATCH
             return MOSWireType.DS_GATE, MOSWireType.DS, MOSWireType.DS_MATCH
+
+    @property
+    def mid_conn_types(self) -> Sequence[MOSWireType]:
+        """Return sequence of top wire connection types.
+
+        index 0 is the default type.
+        """
+        if self.double_gate:
+            return MOSWireType.DS_GATE, MOSWireType.DS, MOSWireType.DS_MATCH
+
+        raise RuntimeError("trying to use mid conn, when its not a double gate")
+        return []
+
 
     def get_ext_info(self, top_edge: bool) -> RowExtInfo:
         return self.top_ext_info if top_edge ^ self.flip else self.bot_ext_info
@@ -248,6 +290,10 @@ class MOSRowInfo:
             ans = self.ds_m_conn_y
         elif wtype is MOSWireType.DS_GATE:
             ans = self.ds_g_conn_y
+        elif wtype is MOSWireType.G2:
+            ans = self.g2_conn_y
+        elif wtype is MOSWireType.G2_MATCH:
+            ans = self.g2_m_conn_y
         else:
             raise ValueError(f'Unsupported MOSWireType: {wtype.name}')
         if self.flip:
@@ -258,6 +304,8 @@ class MOSRowInfo:
         """get list of all possible Y coordinates the given wire type could connect to"""
         if wtype is MOSWireType.G or wtype is MOSWireType.G_MATCH:
             ans = [self.g_conn_y]
+        elif wtype is MOSWireType.G2 or wtype is MOSWireType.G2_MATCH:
+            ans = [self.g2_conn_y]
         elif wtype is MOSWireType.DS:
             ans = [self.ds_conn_y]
         elif wtype is MOSWireType.DS_MATCH or wtype is MOSWireType.DS_GATE:
@@ -274,7 +322,7 @@ class MOSRowInfo:
     def to_dict(self) -> Mapping[str, Any]:
         key_list = ['lch', 'width', 'sub_width', 'threshold', 'height', 'flip', 'g_conn_y',
                     'g_m_conn_y', 'ds_conn_y', 'ds_m_conn_y', 'ds_g_conn_y', 'sub_conn_y',
-                    'guard_ring']
+                    'guard_ring', 'double_gate', 'g2_conn_y', 'g2_m_conn_y']
         ans = {key: getattr(self, key) for key in key_list}
         ans['row_type'] = self.row_type.name
         ans['top_ext_info'] = self.top_ext_info.to_dict()
@@ -290,6 +338,7 @@ class MOSPorts:
     s: WireArray
     shorted_ports: ImmutableList[MOSPortType]
     m: Optional[WireArray] = None
+    g2: Optional[WireArray] = None
 
     @property
     def num_s(self) -> int:
@@ -330,7 +379,10 @@ class NAND2Ports:
 
 @dataclass(eq=True, frozen=True)
 class RowPlaceInfo:
-    """Information about a transistor row, placement data included."""
+    """Information about a transistor row, placement data included.
+    (yb_blk, yt_blk) describe the y dimensions of the block, i.e. the MOS row.
+    (yb, yt) describe the y dimensions of the block plus any edge extensions.
+    """
     row_info: MOSRowInfo
     bot_wires: WireLookup = field(compare=False)
     top_wires: WireLookup = field(compare=False)
@@ -339,6 +391,7 @@ class RowPlaceInfo:
     yb_blk: int
     yt_blk: int
     y_conn: Tuple[int, int]
+    mid_wires: Optional[WireLookup] = None
 
     @classmethod
     def from_dict(cls, table: Mapping[str, Any]) -> RowPlaceInfo:
@@ -350,9 +403,11 @@ class RowPlaceInfo:
         yb_blk: int = table['yb_blk']
         yt_blk: int = table['yt_blk']
         y_conn: Tuple[int, int] = tuple(table['y_conn'])
+        mid_wires: Optional[Mapping[Tuple[str, int], Tuple[float, int]]] = table.get('mid_wires', {})
 
         return RowPlaceInfo(MOSRowInfo.from_dict(row_info), WireLookup.from_dict(bot_wires),
-                            WireLookup.from_dict(top_wires), yb, yt, yb_blk, yt_blk, y_conn)
+                            WireLookup.from_dict(top_wires), yb, yt, yb_blk, yt_blk, y_conn,
+                            WireLookup.from_dict(mid_wires))
 
     def to_dict(self) -> Mapping[str, Any]:
         return dict(
@@ -364,28 +419,43 @@ class RowPlaceInfo:
             yb_blk=self.yb_blk,
             yt_blk=self.yt_blk,
             y_conn=self.y_conn,
+            mid_wires=self.mid_wires.to_dict()
         )
 
     def get_extend(self, tr_pitch, delta: int, top_edge: bool, shared: Sequence[str]
                    ) -> RowPlaceInfo:
+        """Returns a copy of self, with either the top or bottom edge of the bound box
+        extended delta in the y direction.
+        Uses tr_pitch to quantize delta for shifting the tracks.
+        `shared` lists tracks shared with block abut on the extending edge.
+        When top_edge==True, the top edge is shifted by delta and the top tracks are shifted.
+        When top_edge==False, the top edge is shifted by delta, the active area is shifted by delta,
+            and the tracks are shifted by delta. This maintains alignment with y=0.
+        """
         tr_shift = HalfInt((2 * delta) // tr_pitch)
         if top_edge:
             top_wires = self.top_wires.get_move_shared(tr_shift, shared)
             return RowPlaceInfo(self.row_info, self.bot_wires, top_wires, self.yb,
-                                self.yt + delta, self.yb_blk, self.yt_blk, self.y_conn)
+                                self.yt + delta, self.yb_blk, self.yt_blk, self.y_conn,
+                                mid_wires=self.mid_wires)
         else:
             return RowPlaceInfo(self.row_info, self.bot_wires.get_move(tr_shift, shared),
                                 self.top_wires.get_move(tr_shift, []), self.yb, self.yt + delta,
                                 self.yb_blk + delta, self.yt_blk + delta,
-                                (self.y_conn[0] + delta, self.y_conn[1] + delta))
+                                (self.y_conn[0] + delta, self.y_conn[1] + delta),
+                                mid_wires=self.mid_wires.get_move(tr_shift, []))
 
     def get_move(self, tr_pitch: int, delta: int) -> RowPlaceInfo:
+        """Returns a copy of self, shifted delta in the y direction.
+        Uses tr_pitch to quantize delta for shifting the tracks.
+        """
         tr_shift = HalfInt((2 * delta) // tr_pitch)
         el = []
         return RowPlaceInfo(self.row_info, self.bot_wires.get_move(tr_shift, el),
                             self.top_wires.get_move(tr_shift, el), self.yb + delta, self.yt + delta,
                             self.yb_blk + delta, self.yt_blk + delta,
-                            (self.y_conn[0] + delta, self.y_conn[1] + delta))
+                            (self.y_conn[0] + delta, self.y_conn[1] + delta),
+                            mid_wires=self.mid_wires.get_move(tr_shift, el))
 
     def get_ext_margin(self, top_edge: bool) -> int:
         return self.yt - self.yt_blk if top_edge else self.yb_blk - self.yb

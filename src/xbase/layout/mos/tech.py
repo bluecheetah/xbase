@@ -130,6 +130,11 @@ class MOSTech(abc.ABC):
     def can_short_adj_tracks(self, conn_layer: int) -> bool:
         raise NotImplementedError('Not implemented')
 
+    @property
+    @abc.abstractmethod
+    def can_draw_double_gate(self) -> bool:
+        raise NotImplementedError('Not implemented')
+
     @abc.abstractmethod
     def get_track_specs(self, conn_layer: int, top_layer: int) -> List[TrackSpec]:
         return []
