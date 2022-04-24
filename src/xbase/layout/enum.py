@@ -103,8 +103,8 @@ class MOSWireType(IntEnum):
 
     @property
     def is_physical(self) -> bool:
-        return not (self is MOSWireType.G_MATCH or self is MOSWireType.DS_MATCH \
-            or self is MOSWireType.G2_MATCH)
+        return not (self is MOSWireType.G_MATCH or self is MOSWireType.DS_MATCH
+                    or self is MOSWireType.G2_MATCH)
 
 
 class MOSPortType(Enum):

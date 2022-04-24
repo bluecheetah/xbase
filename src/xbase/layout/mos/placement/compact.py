@@ -146,7 +146,7 @@ def _place_mirror(tech_cls: MOSTech, ext_info: RowExtInfo, ycur: int, ignore_vm_
     blk_h_pitch = tech_cls.blk_h_pitch
 
     mirror_ext_w_info: ExtWidthInfo = tech_cls.get_ext_width_info(ext_info, ext_info,
-                                                    ignore_vm_sp_le=ignore_vm_sp_le)
+                                                                  ignore_vm_sp_le=ignore_vm_sp_le)
 
     ext_w_cur = ycur // blk_h_pitch
     ext_w_tot = mirror_ext_w_info.get_next_width(2 * ext_w_cur, even=True)
@@ -310,8 +310,7 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
             if mid_wg:
                 mid_wg.place_compact(hm_layer, tr_manager,
                                      pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
-                                     prev_wg=prev_wg, #top_mirror=top_mirror and is_top_row,)
-                                     ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_mid[1]))
+                                     prev_wg=prev_wg, ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_mid[1]))
                 prev_wg = mid_wg
             
             # place top wires above the middle wires
@@ -326,8 +325,7 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
             if top_wg:
                 top_wg.place_compact(hm_layer, tr_manager,
                                      pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
-                                     prev_wg=prev_wg, #top_mirror=top_mirror and is_top_row,
-                                     ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_top[1]))
+                                     prev_wg=prev_wg, ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_top[1]))
                 prev_wg = top_wg
             
             bnd_table = top_wg.get_placement_bounds(hm_layer, grid)
@@ -337,7 +335,6 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
                                                 conn_y_bnds_top[1], True)
         else:
             # place top wires
-            
             conn_y_bnds_top = [COORD_MAX, COORD_MIN]
             pcons = {}
             for wtype, conn_y in top_conn_y_table.items():

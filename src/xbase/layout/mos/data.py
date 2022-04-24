@@ -234,8 +234,8 @@ class MOSRowInfo:
                           table['ds_m_conn_y'], table['ds_g_conn_y'], table['sub_conn_y'],
                           guard_ring=table.get('guard_ring', False),
                           double_gate=table.get('double_gate', False),
-                          g2_conn_y=table.get('g2_conn_y', (0,0)),
-                          g2_m_conn_y=table.get('g2_m_conn_y', (0,0)))
+                          g2_conn_y=table.get('g2_conn_y', (0, 0)),
+                          g2_m_conn_y=table.get('g2_m_conn_y', (0, 0)))
 
     @property
     def bot_conn_types(self) -> Sequence[MOSWireType]:
@@ -273,8 +273,6 @@ class MOSRowInfo:
             return MOSWireType.DS_GATE, MOSWireType.DS, MOSWireType.DS_MATCH
 
         raise RuntimeError("trying to use mid conn, when its not a double gate")
-        return []
-
 
     def get_ext_info(self, top_edge: bool) -> RowExtInfo:
         return self.top_ext_info if top_edge ^ self.flip else self.bot_ext_info
