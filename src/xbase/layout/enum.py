@@ -69,19 +69,42 @@ class MOSCutMode(Flag):
 
 # Note: make this IntEnum so it is sortable by ImmutableSortedDict.
 class MOSWireType(IntEnum):
+    """
+    These describe the placements of tracks above the conn_layer, relative to 
+    the conn_layer ports.
+
+    G: tracks directly over gate connection
+    G_MATCH: tracks south of gate connection to match / reduce gate parasitics
+    DS: tracks directly over drain / source connection
+    DS_GATE: track over drain/source, overlapping with gate if possible
+    DS_MATCH: tracks north of drain/source conn to match / reduce parasitics
+    G2: for double gate transistors, tracks directly over the 2nd gate
+    G2_MATCH: similar to G_MATCH for double gate transistors
+
+    For flipped transistors, G will be at the top, DS / G2 will be at the bottom.
+    For not flipped transistors, G will be at the bottom, DS / G2 will be at the top.
+
+    """
     G = 0
     G_MATCH = 1
     DS = 2
     DS_GATE = 3
     DS_MATCH = 4
+    G2 = 5
+    G2_MATCH = 6
 
     @property
     def is_gate(self) -> bool:
         return self is MOSWireType.G or self is MOSWireType.G_MATCH
 
     @property
+    def is_gate2(self) -> bool:
+        return self is MOSWireType.G2 or self is MOSWireType.G2_MATCH
+
+    @property
     def is_physical(self) -> bool:
-        return not (self is MOSWireType.G_MATCH or self is MOSWireType.DS_MATCH)
+        return not (self is MOSWireType.G_MATCH or self is MOSWireType.DS_MATCH
+                    or self is MOSWireType.G2_MATCH)
 
 
 class MOSPortType(Enum):
