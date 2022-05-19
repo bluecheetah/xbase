@@ -18,6 +18,7 @@ from __future__ import annotations
 from typing import Any, Optional, Mapping, List, Union, Type, TypeVar, Tuple, cast
 
 import abc
+import copy
 
 from pybag.enum import Orientation
 from pybag.core import Transform, BBox, BBoxArray
@@ -63,14 +64,28 @@ class ArrayPlaceInfo:
         self._nx = nx
         self._ny = ny
 
-        tmp = self._tech_cls.size_unit_block(conn_layer, top_layer, nx, ny, self._tr_manager,
-                                             wire_specs, ext_mode, **kwargs)
+        self._wire_specs = wire_specs
+        self._ext_mode = ext_mode
+
+        self._w = None
+        self._h = None
+        self._wlookup = None
+        self._blk_info = None
+        self._hash = None
+
+        self.commit()
+
+    def commit(self):
+        tmp = self._tech_cls.size_unit_block(self._conn_layer, self._top_layer, self._nx, self._ny, self._tr_manager,
+                                             self._wire_specs, self._ext_mode, **self._blk_options)
         self._w: int = tmp[0]
         self._h: int = tmp[1]
         self._wlookup: ImmutableSortedDict[int, WireLookup] = ImmutableSortedDict(tmp[2])
         self._blk_info: ArrayLayInfo = tmp[3]
 
-        # compute hash
+        self._hash = self.compute_hash()
+
+    def compute_hash(self):
         seed = combine_hash(hash(self._tr_manager), self._conn_layer)
         seed = combine_hash(seed, self._top_layer)
         seed = combine_hash(seed, self._nx)
@@ -79,7 +94,7 @@ class ArrayPlaceInfo:
         seed = combine_hash(seed, self._h)
         seed = combine_hash(seed, hash(self._wlookup))
         seed = combine_hash(seed, hash(self._blk_options))
-        self._hash = seed
+        return seed
 
     def __hash__(self) -> int:
         return self._hash
@@ -160,6 +175,20 @@ class ArrayPlaceInfo:
 
     def get_wire_track_info(self, layer: int, wire_name: str, wire_idx: int) -> Tuple[HalfInt, int]:
         return self._wlookup[layer].get_track_info(wire_name, wire_idx)
+
+    def get_sub_place_info(self, nx: Optional[int] = None, ny: Optional[int] = None, top_layer: Optional[int] = None) \
+            -> ArrayPlaceInfo:
+        ans = copy.copy(self)
+
+        if nx is not None:
+            ans._nx = nx
+        if ny is not None:
+            ans._ny = ny
+        if top_layer is not None:
+            ans._top_layer = top_layer
+
+        ans.commit()
+        return ans
 
 
 class ArrayBase(TemplateBase, abc.ABC):
@@ -278,3 +307,46 @@ class ArrayBase(TemplateBase, abc.ABC):
                             # cannot be combined into BBoxArray if spx is not same
                             return pins[0].get_transform(xform)
                 return BBoxArray(pins[0], nx, spx=spx).get_transform(xform)
+
+    def add_tile(self, master: ArrayBase, row_idx: int, col_idx: int, *,
+                 flip_lr: bool = False, flip_ud: bool = False, commit: bool = True) -> PyLayInstance:
+        self._row_check(row_idx, master.ny, flip_ud)
+        self._col_check(col_idx, master.nx, flip_lr)
+
+        unit_h, unit_w = self._info.height, self._info.width
+
+        y0 = row_idx * unit_h
+        x0 = col_idx * unit_w
+
+        if flip_ud:
+            orient = Orientation.MX
+            y0 += unit_h
+        else:
+            orient = Orientation.R0
+
+        if flip_lr:
+            orient = orient.flip_lr()
+            x0 += unit_w
+
+        return self.add_instance(master, inst_name=f'XR{row_idx}C{col_idx}',
+                                 xform=Transform(x0, y0, orient), commit=commit)
+
+    def _row_check(self, row_idx: int, num_rows: int, flip: bool):
+        if flip:
+            row_bot, row_top = row_idx - num_rows + 1, row_idx
+        else:
+            row_bot, row_top = row_idx, row_idx + num_rows - 1
+        if row_bot < 0:
+            raise ValueError(f"Bottom row {row_bot} cannot be less than 0")
+        if row_top >= self.ny:
+            raise ValueError(f"Top row {row_top} cannot be greater than or equal to ny {self.ny}")
+
+    def _col_check(self, col_idx: int, num_cols: int, flip: bool):
+        if flip:
+            col_left, col_right = col_idx - num_cols + 1, col_idx
+        else:
+            col_left, col_right = col_idx, col_idx + num_cols - 1
+        if col_left < 0:
+            raise ValueError(f"left col {col_left} cannot be less than 0")
+        if col_right > self.nx:
+            raise ValueError(f"right col {col_right} cannot be greater than or equal to nx {self.nx}")
