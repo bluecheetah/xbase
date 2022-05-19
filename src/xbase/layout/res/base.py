@@ -24,7 +24,7 @@ from typing import Any, Optional, Mapping, cast, Union, Tuple, Sequence
 from pybag.core import BBox, Transform
 from pybag.enum import MinLenMode, RoundMode, Direction, Orientation
 
-from bag.util.immutable import Param
+from bag.util.immutable import Param, combine_hash
 from bag.layout.template import TemplateDB
 from bag.layout.tech import TechInfo
 from bag.layout.routing.base import WDictType, SpDictType, WireArray, TrackID
@@ -60,17 +60,29 @@ class ResBasePlaceInfo(ArrayPlaceInfo):
         if 'res_type' in kwargs['unit_specs']['params']:
             res_type = kwargs['unit_specs']['params']['res_type']
 
-        ArrayPlaceInfo.__init__(self, parent_grid, wire_specs, tr_widths, tr_spaces, top_layer,
-                                nx, ny, tech_cls, conn_layer=conn_layer, tr_specs=tr_specs,
-                                half_space=half_space, ext_mode=ext_mode, res_type=res_type,
-                                mos_type=mos_type, threshold=threshold, **kwargs)
-
         self._res_type = res_type
         self._mos_type = MOSType[mos_type]
         self._threshold = threshold
 
         self._w_res = tech_cls.get_width(**kwargs)
         self._l_res = tech_cls.get_length(**kwargs)
+
+        ArrayPlaceInfo.__init__(self, parent_grid, wire_specs, tr_widths, tr_spaces, top_layer,
+                                nx, ny, tech_cls, conn_layer=conn_layer, tr_specs=tr_specs,
+                                half_space=half_space, ext_mode=ext_mode, res_type=res_type,
+                                mos_type=mos_type, threshold=threshold, **kwargs)
+
+    def compute_hash(self):
+        seed = super().compute_hash()
+        seed = combine_hash(seed, hash(self._res_type))
+        seed = combine_hash(seed, hash(self._mos_type))
+        seed = combine_hash(seed, hash(self._threshold))
+        seed = combine_hash(seed, self._w_res)
+        seed = combine_hash(seed, self._l_res)
+        return seed
+
+    def __hash__(self) -> int:
+        return self._hash
 
     def __eq__(self, other: Any) -> bool:
         # noinspection PyProtectedMember

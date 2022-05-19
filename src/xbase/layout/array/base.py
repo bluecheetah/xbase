@@ -67,6 +67,12 @@ class ArrayPlaceInfo:
         self._wire_specs = wire_specs
         self._ext_mode = ext_mode
 
+        self._w = None
+        self._h = None
+        self._wlookup = None
+        self._blk_info = None
+        self._hash = None
+
         self.commit()
 
     def commit(self):
@@ -77,7 +83,9 @@ class ArrayPlaceInfo:
         self._wlookup: ImmutableSortedDict[int, WireLookup] = ImmutableSortedDict(tmp[2])
         self._blk_info: ArrayLayInfo = tmp[3]
 
-        # compute hash
+        self._hash = self.compute_hash()
+
+    def compute_hash(self):
         seed = combine_hash(hash(self._tr_manager), self._conn_layer)
         seed = combine_hash(seed, self._top_layer)
         seed = combine_hash(seed, self._nx)
@@ -86,7 +94,7 @@ class ArrayPlaceInfo:
         seed = combine_hash(seed, self._h)
         seed = combine_hash(seed, hash(self._wlookup))
         seed = combine_hash(seed, hash(self._blk_options))
-        self._hash = seed
+        return seed
 
     def __hash__(self) -> int:
         return self._hash
