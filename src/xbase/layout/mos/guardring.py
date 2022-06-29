@@ -90,7 +90,7 @@ class GuardRing(MOSBase):
                 self.add_pin(f'VDD_guard_{tile_idx}_{ridx}', warr)
 
     def draw_guard_ring(self, master: MOSBase, pmos_gr: str, nmos_gr: str,
-                        sep_ncol: Tuple[int, int], edge_ncol: int
+                        sep_ncol: Tuple[int, int], edge_ncol: int, export_pins: bool = True
                         ) -> Tuple[PyLayInstance, List[Tuple[List[WireArray], List[WireArray]]]]:
         self._core = master
         self._sch_cls = master.get_schematic_class_inst()
@@ -121,8 +121,9 @@ class GuardRing(MOSBase):
         inst = self.add_tile(master, 1, edge_ncol + sep_l)
         self.set_mos_size(num_cols=ncol, num_tiles=ntile)
 
-        for name in inst.port_names_iter():
-            self.reexport(inst.get_port(name))
+        if export_pins:
+            for name in inst.port_names_iter():
+                self.reexport(inst.get_port(name))
 
         sup_list = []
         vdd_vm_list = []
