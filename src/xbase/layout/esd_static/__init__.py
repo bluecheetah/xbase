@@ -8,7 +8,7 @@ from bag.design.module import Module
 from bag.util.immutable import Param
 
 from pybag.core import BBox
-from pybag.enum import Orient2D, Direction, RoundMode
+from pybag.enum import Orient2D, Direction, RoundMode, MinLenMode
 
 from ...schematic.esd_static import xbase__esd_static
 
@@ -144,27 +144,30 @@ class ESDStatic(TemplateBase):
         sup_vm_tid = TrackID(tr_layer, vm_idx_list[sup_idx], w_sup_vm, _n, _p)
         sup_vm = []
         for idx, bbox in enumerate(sup_hm):
-            sup_vm.append(self.connect_bbox_to_tracks(Direction.LOWER, hm_lp, bbox, sup_vm_tid))
+            sup_vm.append(self.connect_bbox_to_tracks(Direction.LOWER, hm_lp, bbox, sup_vm_tid,
+                                                      min_len_mode=MinLenMode.MIDDLE))
 
         plus_vm_tid = TrackID(tr_layer, vm_idx_list[plus_idx], w_sup_vm, _n, _p)
         plus_vm = []
         for bbox in plus_hm:
-            plus_vm.append(self.connect_bbox_to_tracks(Direction.LOWER, hm_lp, bbox, plus_vm_tid))
+            plus_vm.append(self.connect_bbox_to_tracks(Direction.LOWER, hm_lp, bbox, plus_vm_tid,
+                                                       min_len_mode=MinLenMode.MIDDLE))
 
         minus_vm_tid = TrackID(tr_layer, vm_idx_list[minus_idx], w_sup_vm, _n, _p)
         minus_vm = []
         for bbox in minus_hm:
-            minus_vm.append(self.connect_bbox_to_tracks(Direction.LOWER, hm_lp, bbox, minus_vm_tid))
+            minus_vm.append(self.connect_bbox_to_tracks(Direction.LOWER, hm_lp, bbox, minus_vm_tid,
+                                                        min_len_mode=MinLenMode.MIDDLE))
 
-        _lower = min([warr.lower for warr in chain(sup_vm, plus_vm, minus_vm)])
-        _upper = max([warr.upper for warr in chain(sup_vm, plus_vm, minus_vm)])
-        sup_port = self.connect_wires(sup_vm, lower=_lower, upper=_upper)[0]
-        plus_port = self.connect_wires(plus_vm, lower=_lower, upper=_upper)[0]
-        minus_port = self.connect_wires(minus_vm, lower=_lower, upper=_upper)[0]
+        sup_port = self.connect_wires(sup_vm)[0]
+        plus_port = self.connect_wires(plus_vm)[0]
+        minus_port = self.connect_wires(minus_vm)[0]
 
         # route up to port_layer
         if port_layer > tr_layer:
             for _layer in range(tr_layer + 1, port_layer + 1):
+                _lower = min([warr.lower for warr in [sup_port, plus_port, minus_port]])
+                _upper = max([warr.upper for warr in [sup_port, plus_port, minus_port]])
                 _l_idx = self.grid.coord_to_track(_layer, _lower, RoundMode.GREATER_EQ)
                 _r_idx = self.grid.coord_to_track(_layer, _upper, RoundMode.LESS_EQ)
                 _num = tr_manager.get_num_wires_between(_layer, 'sup', _l_idx, 'sup', _r_idx, 'sup') + 2
@@ -175,18 +178,26 @@ class ESDStatic(TemplateBase):
                 _p = (_idx_list[1] - _idx_list[0]) * 3
                 w_sup = tr_manager.get_width(_layer, 'sup')
 
-                sup_tid = TrackID(_layer, _idx_list[sup_idx], w_sup, _n, _p)
-                sup_port = self.connect_to_tracks(sup_port, sup_tid)
-                plus_tid = TrackID(_layer, _idx_list[plus_idx], w_sup, _n, _p)
-                plus_port = self.connect_to_tracks(plus_port, plus_tid)
-                minus_tid = TrackID(_layer, _idx_list[minus_idx], w_sup, _n, _p)
-                minus_port = self.connect_to_tracks(minus_port, minus_tid)
+                if cell_name == 'esd_vdd':
+                    sup_idx = 2
+                    plus_idx = 1
+                    minus_idx = 0
+                else:   # cell_name == 'esd_vss'
+                    if self.grid.get_direction(_layer) is Orient2D.y:
+                        sup_idx = 0
+                        plus_idx = 2
+                        minus_idx = 1
+                    else:
+                        sup_idx = 2
+                        plus_idx = 0
+                        minus_idx = 1
 
-                _lower = min([warr.lower for warr in [sup_port, plus_port, minus_port]])
-                _upper = max([warr.upper for warr in [sup_port, plus_port, minus_port]])
-                sup_port = self.connect_wires(sup_port, lower=_lower, upper=_upper)[0]
-                plus_port = self.connect_wires(plus_port, lower=_lower, upper=_upper)[0]
-                minus_port = self.connect_wires(minus_port, lower=_lower, upper=_upper)[0]
+                sup_tid = TrackID(_layer, _idx_list[sup_idx], w_sup, _n, _p)
+                sup_port = self.connect_to_tracks(sup_port, sup_tid, min_len_mode=MinLenMode.MIDDLE)
+                plus_tid = TrackID(_layer, _idx_list[plus_idx], w_sup, _n, _p)
+                plus_port = self.connect_to_tracks(plus_port, plus_tid, min_len_mode=MinLenMode.MIDDLE)
+                minus_tid = TrackID(_layer, _idx_list[minus_idx], w_sup, _n, _p)
+                minus_port = self.connect_to_tracks(minus_port, minus_tid, min_len_mode=MinLenMode.MIDDLE)
 
         self.add_pin(sup_name, sup_port)
         self.add_pin('plus', plus_port)

@@ -6,7 +6,7 @@ from bag.design.module import Module
 from bag.util.immutable import Param
 
 from pybag.core import BBox, Transform
-from pybag.enum import Orientation, RoundMode
+from pybag.enum import Orientation, RoundMode, MinLenMode
 
 from . import ESDStatic
 from ...schematic.esd import xbase__esd
@@ -91,9 +91,9 @@ class ESD(TemplateBase):
             top_ports[name] = self.connect_wires([port_p, port_n])[0]
 
         if top_layer > conn_layer:
-            _lower = top_ports['term'].lower
-            _upper = top_ports['term'].upper
             for _layer in range(conn_layer + 1, top_layer + 1):
+                _lower = min([warr.lower for warr in top_ports.values()])
+                _upper = max([warr.upper for warr in top_ports.values()])
                 _l_idx = self.grid.coord_to_track(_layer, _lower, RoundMode.GREATER_EQ)
                 _r_idx = self.grid.coord_to_track(_layer, _upper, RoundMode.LESS_EQ)
                 _num = tr_manager.get_num_wires_between(_layer, 'sup', _l_idx, 'sup', _r_idx, 'sup') + 2
@@ -105,17 +105,11 @@ class ESD(TemplateBase):
                 w_sup = tr_manager.get_width(_layer, 'sup')
 
                 vss_tid = TrackID(_layer, _idx_list[0], w_sup, _n, _p)
-                top_ports['VSS'] = self.connect_to_tracks(top_ports['VSS'], vss_tid)
+                top_ports['VSS'] = self.connect_to_tracks(top_ports['VSS'], vss_tid, min_len_mode=MinLenMode.MIDDLE)
                 term_tid = TrackID(_layer, _idx_list[1], w_sup, _n, _p)
-                top_ports['term'] = self.connect_to_tracks(top_ports['term'], term_tid)
+                top_ports['term'] = self.connect_to_tracks(top_ports['term'], term_tid, min_len_mode=MinLenMode.MIDDLE)
                 vdd_tid = TrackID(_layer, _idx_list[2], w_sup, _n, _p)
-                top_ports['VDD'] = self.connect_to_tracks(top_ports['VDD'], vdd_tid)
-
-                _lower = min([warr.lower for warr in top_ports.values()])
-                _upper = max([warr.upper for warr in top_ports.values()])
-                top_ports['VSS'] = self.connect_wires(top_ports['VSS'], lower=_lower, upper=_upper)[0]
-                top_ports['term'] = self.connect_wires(top_ports['term'], lower=_lower, upper=_upper)[0]
-                top_ports['VDD'] = self.connect_wires(top_ports['VDD'], lower=_lower, upper=_upper)[0]
+                top_ports['VDD'] = self.connect_to_tracks(top_ports['VDD'], vdd_tid, min_len_mode=MinLenMode.MIDDLE)
 
         for pin in ('VDD', 'VSS', 'term'):
             self.add_pin(pin, top_ports[pin])
