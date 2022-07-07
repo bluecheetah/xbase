@@ -45,7 +45,8 @@ class ArrayPlaceInfo:
                  tr_widths: WDictType, tr_spaces: SpDictType, top_layer: int, nx: int, ny: int,
                  tech_cls: T, *, conn_layer: Optional[int] = None,
                  tr_specs: Optional[List[TrackSpec]] = None, half_space: bool = True,
-                 ext_mode: ExtendMode = ExtendMode.AREA, **kwargs: Any) -> None:
+                 ext_mode: ExtendMode = ExtendMode.AREA,
+                 base_orient: Orientation = Orientation.R0, is_top: bool = True, **kwargs: Any) -> None:
         self._tech_cls: ArrayTech = tech_cls
 
         # update routing grid
@@ -63,6 +64,8 @@ class ArrayPlaceInfo:
         self._blk_options = Param(kwargs)
         self._nx = nx
         self._ny = ny
+        self._base_orient = base_orient
+        self._is_top = is_top
 
         self._wire_specs = wire_specs
         self._ext_mode = ext_mode
@@ -90,6 +93,8 @@ class ArrayPlaceInfo:
         seed = combine_hash(seed, self._top_layer)
         seed = combine_hash(seed, self._nx)
         seed = combine_hash(seed, self._ny)
+        seed = combine_hash(seed, self._base_orient)
+        seed = combine_hash(seed, self._is_top)
         seed = combine_hash(seed, self._w)
         seed = combine_hash(seed, self._h)
         seed = combine_hash(seed, hash(self._wlookup))
@@ -176,8 +181,9 @@ class ArrayPlaceInfo:
     def get_wire_track_info(self, layer: int, wire_name: str, wire_idx: int) -> Tuple[HalfInt, int]:
         return self._wlookup[layer].get_track_info(wire_name, wire_idx)
 
-    def get_sub_place_info(self, nx: Optional[int] = None, ny: Optional[int] = None, top_layer: Optional[int] = None) \
-            -> ArrayPlaceInfo:
+    def get_sub_place_info(self, nx: Optional[int] = None, ny: Optional[int] = None, top_layer: Optional[int] = None,
+                           row: int = 0, col: int = 0, base_orient: Optional[Orientation] = None,
+                           is_top: bool = False) -> ArrayPlaceInfo:
         ans = copy.copy(self)
 
         if nx is not None:
@@ -186,6 +192,14 @@ class ArrayPlaceInfo:
             ans._ny = ny
         if top_layer is not None:
             ans._top_layer = top_layer
+        if base_orient is None:
+            base_orient = self._base_orient
+            if row & 1:
+                base_orient = base_orient.flip_ud()
+            if col & 1:
+                base_orient = base_orient.flip_lr()
+            ans._base_orient = base_orient
+        ans._is_top = is_top
 
         ans.commit()
         return ans
@@ -221,9 +235,15 @@ class ArrayBase(TemplateBase, abc.ABC):
     def ny(self) -> int:
         return self._info.ny
 
-    def draw_base(self, info: ArrayPlaceInfo) -> ArrayUnit:
+    def draw_base(self, info: ArrayPlaceInfo, flip_lr: bool = False, flip_ud: bool = False,
+                  commit: bool = None) -> ArrayUnit:
         self._info = info
         self.grid = info.grid
+
+        # By default, only commit unit instances if info is the top ArrayPlaceInfo.
+        # If info is not top (i.e., a subset of another ArrayPlaceInfo, the unit array should be drawn at the top level.
+        if commit is None:
+            commit = info._is_top
 
         self._unit = master = self.new_template(ArrayUnit, params=dict(desc=self.tech_cls.desc,
                                                                        blk_info=info.blk_info))
@@ -234,18 +254,31 @@ class ArrayBase(TemplateBase, abc.ABC):
         nye = info.ny - nyo
         spx = 2 * info.width
         spy = 2 * info.height
-        self.add_instance(master, inst_name='XLL', xform=Transform(0, 0),
-                          nx=nxe, ny=nye, spx=spx, spy=spy)
+
+        orient_list = [Orientation.R0, Orientation.MY, Orientation.MX, Orientation.R180]
+
+        if flip_lr:
+            orient_list = [orient.flip_lr() for orient in orient_list]
+            dx_list = [spx // 2, spx // 2, spx // 2, spx // 2]
+        else:
+            dx_list = [0, spx, 0, spx]
+
+        if flip_ud:
+            orient_list = [orient.flip_ud() for orient in orient_list]
+            dy_list = [spy // 2, spy // 2, spy // 2, spy // 2]
+        else:
+            dy_list = [0, 0, spy, spy]
+        xform_ll, xform_lr, xform_ul, xform_ur = [Transform(dx, dy, orient) for dx, dy, orient in
+                                                  zip(dx_list, dy_list, orient_list)]
+
+        self.add_instance(master, inst_name='XLL', xform=xform_ll, nx=nxe, ny=nye, spx=spx, spy=spy, commit=commit)
         if nxo > 0:
-            self.add_instance(master, inst_name='XLR', xform=Transform(spx, 0, Orientation.MY),
-                              nx=nxo, ny=nye, spx=spx, spy=spy)
+            self.add_instance(master, inst_name='XLR', xform=xform_lr, nx=nxo, ny=nye, spx=spx, spy=spy, commit=commit)
         if nyo > 0:
-            self.add_instance(master, inst_name='XUL', xform=Transform(0, spy, Orientation.MX),
-                              nx=nxe, ny=nyo, spx=spx, spy=spy)
+            self.add_instance(master, inst_name='XUL', xform=xform_ul, nx=nxe, ny=nyo, spx=spx, spy=spy, commit=commit)
             if nxo > 0:
-                self.add_instance(master, inst_name='XUR',
-                                  xform=Transform(spx, spy, Orientation.R180),
-                                  nx=nxo, ny=nyo, spx=spx, spy=spy)
+                self.add_instance(master, inst_name='XUR', xform=xform_ur, nx=nxo, ny=nyo, spx=spx, spy=spy,
+                                  commit=commit)
 
         bbox = BBox(0, 0, info.nx * info.width, info.ny * info.height)
         self.set_size_from_bound_box(info.top_layer, bbox)

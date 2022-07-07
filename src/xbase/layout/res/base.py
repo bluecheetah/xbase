@@ -156,13 +156,13 @@ class ResArrayBase(ArrayBase, abc.ABC):
     def sub_type(self) -> MOSType:
         return cast(ResBasePlaceInfo, self.place_info).mos_type
 
-    def draw_base(self, obj: Union[ResBasePlaceInfo, Mapping[str, Any]]) -> ResBasePlaceInfo:
+    def draw_base(self, obj: Union[ResBasePlaceInfo, Mapping[str, Any]], **kwargs) -> ResBasePlaceInfo:
         if isinstance(obj, ResBasePlaceInfo):
             pinfo = obj
         else:
             pinfo = ResBasePlaceInfo(self.grid, **obj)
 
-        super().draw_base(pinfo)
+        super().draw_base(pinfo, **kwargs)
         return pinfo
 
     def get_res_bbox(self, row_idx: int, col_idx: int) -> BBox:

@@ -41,12 +41,22 @@ class ArrayBaseWrapper(TemplateBase):
     def core(self) -> ArrayBase:
         return self._core
 
+    @property
+    def core_xform(self) -> Transform:
+        return self._xform
+
     @classmethod
     def get_params_info(cls) -> Dict[str, str]:
         return dict(
             cls_name='wrapped class name.',
             params='parameters for the wrapped class.',
+            half_blk_x='Defaults to True.  True to allow half-block width.',
+            half_blk_y='Defaults to True.  True to allow half-block height.',
         )
+
+    @classmethod
+    def get_default_param_values(cls) -> Dict[str, Any]:
+        return dict(half_blk_x=True, half_blk_y=True)
 
     def get_schematic_class_inst(self) -> Optional[Type[Module]]:
         return self._core.get_schematic_class_inst()
@@ -65,7 +75,8 @@ class ArrayBaseWrapper(TemplateBase):
         gen_cls = cast(Type[ArrayBase], import_class(cls_name))
         master = self.new_template(gen_cls, params=params)
 
-        inst = self.draw_boundaries(master, master.top_layer)
+        inst = self.draw_boundaries(master, master.top_layer, half_blk_x=self.params['half_blk_x'],
+                                    half_blk_y=self.params['half_blk_y'])
         # pass out schematic parameters
         self.sch_params = master.sch_params
 
@@ -110,6 +121,8 @@ class ArrayBaseWrapper(TemplateBase):
         bbox = BBox(0, 0, tot_w, tot_h)
         self.set_size_from_bound_box(top_layer, bbox)
 
+        self._xform = Transform(corner_w, corner_h)
+
         self.add_instance(c_master, inst_name='CLL')
         self.add_instance(c_master, inst_name='CLR', xform=Transform(tot_w, 0, Orientation.MY))
         self.add_instance(c_master, inst_name='CUL', xform=Transform(0, tot_h, Orientation.MX))
@@ -123,7 +136,7 @@ class ArrayBaseWrapper(TemplateBase):
         self.add_instance(l_master, inst_name='ET',
                           xform=Transform(tot_w, corner_h, Orientation.MY), ny=ny, spy=spy)
 
-        inst = self.add_instance(master, inst_name='RES', xform=Transform(corner_w, corner_h))
+        inst = self.add_instance(master, inst_name='RES', xform=self._xform)
 
         # set edge parameters
         self.edge_info = TemplateEdgeInfo(c_master.left_edge, c_master.bottom_edge,
