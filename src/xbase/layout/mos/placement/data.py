@@ -433,6 +433,10 @@ class MOSBasePlaceInfo:
         return self._priority
 
     @property
+    def wire_lookup(self) -> ImmutableSortedDict[int, WireLookup]:
+        return self._wire_lookup
+
+    @property
     def tile_options(self) -> Param:
         return self._options
 
