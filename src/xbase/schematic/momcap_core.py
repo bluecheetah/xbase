@@ -79,4 +79,3 @@ class xbase__momcap_core(Module):
         else:
             self.remove_instance('XRESP')
             self.remove_instance('XRESN')
-
