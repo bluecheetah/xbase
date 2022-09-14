@@ -30,7 +30,7 @@
 
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Any
+from typing import Mapping, Any, Optional
 
 import pkg_resources
 from pathlib import Path
@@ -55,7 +55,7 @@ class xbase__momcap_char(Module):
         Module.__init__(self, self.yaml_file, database, params, **kwargs)
 
     @classmethod
-    def get_params_info(cls) -> Dict[str, str]:
+    def get_params_info(cls) -> Mapping[str, str]:
         """Returns a dictionary from parameter names to descriptions.
 
         Returns
@@ -64,11 +64,17 @@ class xbase__momcap_char(Module):
             dictionary from parameter names to descriptions.
         """
         return dict(
+            has_res_metal='True if res_metal exists in the process',
             res_p='Parameters for metal resistor on plus terminal',
             res_n='Parameters for metal resistor on minus terminal',
         )
 
-    def design(self, res_p: Dict[str, int], res_n: Dict[str, int]) -> None:
+    @classmethod
+    def get_default_param_values(cls) -> Mapping[str, Any]:
+        return dict(res_p=None, res_n=None)
+
+    def design(self, res_p: Optional[Mapping[str, int]], res_n: Optional[Mapping[str, int]], has_res_metal: bool
+               ) -> None:
         """To be overridden by subclasses to design this module.
 
         This method should fill in values for all parameters in
@@ -84,5 +90,9 @@ class xbase__momcap_char(Module):
         restore_instance()
         array_instance()
         """
-        self.instances['XRESP'].design(**res_p)
-        self.instances['XRESN'].design(**res_n)
+        if has_res_metal:
+            self.instances['XRESP'].design(**res_p)
+            self.instances['XRESN'].design(**res_n)
+        else:
+            self.remove_instance('XRESP')
+            self.remove_instance('XRESN')
