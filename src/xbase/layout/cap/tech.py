@@ -35,6 +35,7 @@ from ..data import LayoutInfo, LayoutInfoBuilder
 if TYPE_CHECKING:
     from .base import MOSBasePlaceInfo
 
+
 @dataclass(eq=True, frozen=True)
 class MIMLayInfo:
     """The transistor block layout information object."""
@@ -45,6 +46,7 @@ class MIMLayInfo:
     pin_top_yh: int
     pin_bot_xh: int
 
+
 class MIMTech(abc.ABC):
     """An abstract class for drawing mim cap related layout
     
@@ -52,10 +54,9 @@ class MIMTech(abc.ABC):
     ------------------
     tech_info : TechInfo
         the TechInfo object
-    bot_layer : 
+    bot_layer :
     top_layer :
 
-    
     """
     def __init__(self, tech_info: TechInfo, ) -> None:
         self._tech_info = tech_info
@@ -65,7 +66,6 @@ class MIMTech(abc.ABC):
         
         self._resolution = int(tech_info.config['resolution'])
 
-
     @property
     def mim_config(self) -> Dict[str, Any]:
         return self._mim_config
@@ -74,10 +74,11 @@ class MIMTech(abc.ABC):
     def resolution(self) -> int:
         return self._resolution
 
-    # functions getting technology information       
+    # functions getting technology information 
     @abc.abstractmethod
     def get_mim_cap_info(self, top_layer: int,
-                    bot_layer: int, width_total: int,
-                    width: int, height: int, array: bool, unit_width: Optional[int],
-                    unit_height: Optional[int] ) -> MIMLayInfo: 
+                         bot_layer: int, width_total: int,
+                         width: int, height: int, array: bool,
+                         unit_width: Optional[int],
+                         unit_height: Optional[int]) -> MIMLayInfo:
         raise NotImplementedError('Not implemented')

@@ -31,11 +31,13 @@ from xbase.schematic.momcap_core import xbase__momcap_core
 from xbase.layout.data import LayoutInfo, draw_layout_in_template
 from xbase.layout.cap.tech import MIMTech, MIMLayInfo
 
+
 class MIMCapCore(TemplateBase):
     """MIMCap core
     """
 
-    def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
+    def __init__(self, temp_db: TemplateDB,
+                 params: Param, **kwargs: Any) -> None:
         TemplateBase.__init__(self, temp_db, params, **kwargs)
 
     @classmethod
@@ -77,25 +79,24 @@ class MIMCapCore(TemplateBase):
         unit_height: int = self.params['unit_height'] * scaling
         width_total: int = self.params['width_total'] * scaling
         rotateable: bool = self.params['rotateable']
-        array = True if (unit_width < width_total or unit_height < height) else False
-
+        array = True if (unit_width < width_total or
+                         unit_height < height) else False
 
         top_cap = max(top_layer, bot_layer)
         bot_cap = min(top_layer, bot_layer)
-        w_blk, h_blk = self.grid.get_block_size(top_cap,
-                                        half_blk_x=True, half_blk_y=True) 
+        w_blk, h_blk = self.grid.get_block_size(top_cap, half_blk_x=True,
+                                                half_blk_y=True) 
         tech_cls: MIMTech = grid.tech_info.get_device_tech('mim')
 
-        #function in primitive
-        mim_info: MIMLayInfo = tech_cls.get_mim_cap_info( top_cap,
-                    bot_cap, width_total,
-                    width, height, array, unit_width,
-                    unit_height)
+        # function in primitive
+        mim_info: MIMLayInfo = tech_cls.get_mim_cap_info(top_cap,
+                                                         bot_cap, width_total,
+                                                         width, height, array,
+                                                         unit_width,
+                                                         unit_height)
         draw_layout_in_template(self, mim_info.lay_info)
-
         layoutinfo = mim_info.lay_info
-        
-        
+                     
         # get pin box info
         xh = -(-layoutinfo.bound_box.xh//w_blk)*w_blk
         xl = -(-layoutinfo.bound_box.xl//w_blk)*w_blk
@@ -107,26 +108,42 @@ class MIMCapCore(TemplateBase):
 
         # add primitive or wire pins depending on if need to rotate
         if rotateable:
-            self.add_pin_primitive('bot', bot_cap, BBox(int(xl), int(mim_info.pin_top_yl), int(xl+w_blk), int(mim_info.pin_top_yh)))
-            self.add_pin_primitive('top', top_cap, BBox(int(xh-w_blk), int(mim_info.pin_bot_yl), int(xh), int(mim_info.pin_bot_yh)))
+            self.add_pin_primitive('bot', bot_cap,
+                                   BBox(int(xl), int(mim_info.pin_top_yl), 
+                                        int(xl+w_blk), int(mim_info.pin_top_yh)
+                                        ))
+            self.add_pin_primitive('top', top_cap,
+                                   BBox(int(xh-w_blk),
+                                        int(mim_info.pin_bot_yl),
+                                        int(xh), int(mim_info.pin_bot_yh)))
         else:
             top_dir = grid.get_direction(top_cap)
             if top_dir == Orient2D.y:
                 top_tr = grid.coord_to_track(top_cap, xh, mode=RoundMode.LESS)
-                top_pin = self.add_wires(top_cap, top_tr, mim_info.pin_top_yl, mim_info.pin_top_yh)
-            else:    
-                top_tr = grid.coord_to_track(top_cap, (yh+yl)//2, mode=RoundMode.LESS)
-                tr_wid = grid.coord_to_track(top_cap, yh) - grid.coord_to_track(top_cap, yl)
-                top_pin = self.add_wires(top_cap, top_tr, xh-w_blk, xh, width = math.floor(tr_wid))
+                top_pin = self.add_wires(top_cap, top_tr, mim_info.pin_top_yl,
+                                         mim_info.pin_top_yh)
+            else:  
+                top_tr = grid.coord_to_track(top_cap, (yh+yl)//2, 
+                                             mode=RoundMode.LESS)
+                tr_wid = grid.coord_to_track(top_cap, yh) \
+                    - grid.coord_to_track(top_cap, yl)
+                top_pin = self.add_wires(top_cap, top_tr, xh-w_blk, xh,
+                                         width=math.floor(tr_wid))
             self.add_pin('top', top_pin)
 
-            bot_dir = grid.get_direction(bot_cap)   
+            bot_dir = grid.get_direction(bot_cap)
             if bot_dir == Orient2D.y:
-                bot_tr = grid.coord_to_track(bot_cap, bot_pin_x, mode=RoundMode.GREATER_EQ)
-                bot_pin = self.add_wires(bot_cap, bot_tr, mim_info.pin_bot_yl, mim_info.pin_bot_yh)
-            else:    
-                bot_tr = grid.coord_to_track(bot_cap, (yh+yl)//2, mode=RoundMode.GREATER_EQ)
-                tr_wid = grid.coord_to_track(bot_cap, yh) - grid.coord_to_track(bot_cap, yl)
-                bot_pin = self.add_wires(bot_cap, bot_tr, bot_pin_x+w_blk, bot_pin_x+2*w_blk, width = math.floor(tr_wid))
+                bot_tr = grid.coord_to_track(bot_cap, bot_pin_x,
+                                             mode=RoundMode.GREATER_EQ)
+                bot_pin = self.add_wires(bot_cap, bot_tr, mim_info.pin_bot_yl,
+                                         mim_info.pin_bot_yh)
+            else: 
+                bot_tr = grid.coord_to_track(bot_cap, (yh+yl)//2,
+                                             mode=RoundMode.GREATER_EQ)
+                tr_wid = grid.coord_to_track(bot_cap, yh) \
+                    - grid.coord_to_track(bot_cap, yl)
+                bot_pin = self.add_wires(bot_cap, bot_tr, bot_pin_x+w_blk,
+                                         bot_pin_x+2*w_blk,
+                                         width=math.floor(tr_wid))
             self.add_pin('bot', bot_pin)
 
