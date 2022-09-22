@@ -97,9 +97,7 @@ class MIMCapCore(TemplateBase):
         layoutinfo = mim_info.lay_info
         
         
-        #add pins
-        
-        #might need mim lay info to store the bottom and top coordinates without decomposing the box
+        # get pin box info
         xh = -(-layoutinfo.bound_box.xh//w_blk)*w_blk
         xl = -(-layoutinfo.bound_box.xl//w_blk)*w_blk
         yh = -(-layoutinfo.bound_box.yh//h_blk)*h_blk
@@ -108,6 +106,7 @@ class MIMCapCore(TemplateBase):
         self.set_size_from_bound_box(top_cap, BBox(0, 0, xh, yh))
         bot_pin_x = -(-mim_info.pin_bot_xh//w_blk)*w_blk
 
+        # add primitive or wire pins depending on if need to rotate
         if rotateable:
             self.add_pin_primitive('bot', bot_cap, BBox(int(xl), int(mim_info.pin_top_yl), int(xl+w_blk), int(mim_info.pin_top_yh)))
             self.add_pin_primitive('top', top_cap, BBox(int(xh-w_blk), int(mim_info.pin_bot_yl), int(xh), int(mim_info.pin_bot_yh)))
