@@ -123,32 +123,36 @@ class MOMCapOnMOS(MOSBase):
         cap_ports = self.add_mom_cap(cap_box, bot_layer, num_layer, port_widths=port_w_dict,
                                      cap_wires_list=cw_list, **options)
 
-        # connect input/output, draw metal resistors
-        show_pins = self.show_pins
+        # connect input/output
         for lay, (nport, pport) in cap_ports.items():
-            self.add_pin('plus', pport, show=show_pins)
-            self.add_pin('minus', nport, show=show_pins)
+            self.add_pin('plus', pport)
+            self.add_pin('minus', nport)
 
-        _, _, barr_n, barr_p = cw_list[-1]
-        box_p = barr_p.get_bbox(0)
-        box_n = barr_n.get_bbox(0)
-        top_dir = grid.get_direction(top_layer)
-        res_w = box_p.get_dim(top_dir.perpendicular())
-        coord_c = box_p.get_center(top_dir)
+        # draw metal resistors
+        if self.has_res_metal():
+            _, _, barr_n, barr_p = cw_list[-1]
+            box_p = barr_p.get_bbox(0)
+            box_n = barr_n.get_bbox(0)
+            top_dir = grid.get_direction(top_layer)
+            res_w = box_p.get_dim(top_dir.perpendicular())
+            coord_c = box_p.get_center(top_dir)
 
-        res_w2 = res_w // 2
-        res_w4 = res_w2 // 2
-        wl_p = coord_c - res_w2
-        wu_p = coord_c + res_w2
-        wl_n = coord_c - res_w4
-        wu_n = coord_c + res_w4
-        box_p.set_interval(top_dir, wl_p, wu_p)
-        box_n.set_interval(top_dir, wl_n, wu_n)
-        self.add_res_metal(top_layer, box_p)
-        self.add_res_metal(top_layer, box_n)
+            res_w2 = res_w // 2
+            res_w4 = res_w2 // 2
+            wl_p = coord_c - res_w2
+            wu_p = coord_c + res_w2
+            wl_n = coord_c - res_w4
+            wu_n = coord_c + res_w4
+            box_p.set_interval(top_dir, wl_p, wu_p)
+            box_n.set_interval(top_dir, wl_n, wu_n)
+            self.add_res_metal(top_layer, box_p)
+            self.add_res_metal(top_layer, box_n)
 
-        res_w = grid.get_track_info(top_layer).width
-        self.sch_params = dict(
-            res_p=dict(layer=top_layer, w=res_w, l=res_w2 * 2),
-            res_n=dict(layer=top_layer, w=res_w, l=res_w4 * 2),
-        )
+            res_w = grid.get_track_info(top_layer).width
+            self.sch_params = dict(
+                has_res_metal=True,
+                res_p=dict(layer=top_layer, w=res_w, l=res_w2 * 2),
+                res_n=dict(layer=top_layer, w=res_w, l=res_w4 * 2),
+            )
+        else:
+            self.sch_params = dict(has_res_metal=False)
