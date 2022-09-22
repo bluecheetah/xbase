@@ -91,7 +91,6 @@ class MIMCapCore(TemplateBase):
                     bot_cap, width_total,
                     width, height, array, unit_width,
                     unit_height)
-        print(w_blk)
         draw_layout_in_template(self, mim_info.lay_info)
 
         layoutinfo = mim_info.lay_info
