@@ -1,34 +1,48 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright 2019 Blue Cheetah Analog Design Inc.
+# BSD 3-Clause License
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# Copyright (c) 2018, Regents of the University of California
+# All rights reserved.
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+# * Neither the name of the copyright holder nor the names of its
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""This module defines various MOM cap related templates."""
+"""This module defines various MIM cap related templates."""
 
-from typing import Any, Dict, Optional, Mapping, List, Tuple, Type
+from typing import Any, Optional, Mapping, Type
 import math 
 
-from pybag.core import BBox, BBoxArray
+from pybag.core import BBox
 from pybag.enum import RoundMode, Orient2D
 
 from bag.util.immutable import Param
 from bag.design.module import Module
-from bag.layout.routing.grid import FillConfigType
 from bag.layout.template import TemplateDB, TemplateBase
 
 from xbase.layout.fill.base import DeviceFill
-from xbase.schematic.momcap_core import xbase__momcap_core
-from xbase.layout.data import LayoutInfo, draw_layout_in_template
+from xbase.schematic.mimcap_core import xbase__mimcap_core
+from xbase.layout.data import draw_layout_in_template
 from xbase.layout.cap.tech import MIMTech, MIMLayInfo
 
 
@@ -42,11 +56,25 @@ class MIMCapCore(TemplateBase):
 
     @classmethod
     def get_schematic_class(cls) -> Optional[Type[Module]]:
-        return xbase__momcap_core
+        return xbase__mimcap_core
 
     @classmethod
-    def get_params_info(cls) -> Dict[str, str]:
+    def get_params_info(cls) -> Mapping[str, str]:
         return dict(
+            top_layer='Top layer of MIM cap',
+            bot_layer='Bottom layer of MIM cap',
+            height='height, in um',
+            unit_height='height of single unit (for array)',
+            unit_width='width of single unit (for array)',
+            width='used cap width',
+            width_total='cap width including dummies',
+            rotateable='True if horizontal cap, false if cap needs to be rotated vertically'
+        )
+
+    @classmethod
+    def get_default_param_values(cls) -> Mapping[str, Any]:
+        ans = DeviceFill.get_default_param_values()
+        ans.update(
             top_layer=0,
             bot_layer=0,
             height=0,
@@ -56,28 +84,19 @@ class MIMCapCore(TemplateBase):
             width_total=0,
             rotateable=False
         )
-
-    @classmethod
-    def get_default_param_values(cls) -> Dict[str, Any]:
-        ans = DeviceFill.get_default_param_values()
-        ans.update(
-            cap_config={},
-
-        )
         return ans
 
     def draw_layout(self) -> None:
 
         grid = self.grid
-        scaling = int(1/grid.resolution)
 
         bot_layer: int = self.params['bot_layer']
         top_layer: int = self.params['top_layer']
-        width: int = self.params['width'] * scaling
-        height: int = self.params['height'] * scaling
-        unit_width: int = self.params['unit_width'] * scaling
-        unit_height: int = self.params['unit_height'] * scaling
-        width_total: int = self.params['width_total'] * scaling
+        width: int = self.params['width'] 
+        height: int = self.params['height'] 
+        unit_width: int = self.params['unit_width'] 
+        unit_height: int = self.params['unit_height'] 
+        width_total: int = self.params['width_total'] 
         rotateable: bool = self.params['rotateable']
         array = True if (unit_width < width_total or
                          unit_height < height) else False
@@ -125,8 +144,7 @@ class MIMCapCore(TemplateBase):
             else:  
                 top_tr = grid.coord_to_track(top_cap, (yh+yl)//2, 
                                              mode=RoundMode.LESS)
-                tr_wid = grid.coord_to_track(top_cap, yh) \
-                    - grid.coord_to_track(top_cap, yl)
+                tr_wid = grid.coord_to_track(top_cap, yh) - grid.coord_to_track(top_cap, yl)
                 top_pin = self.add_wires(top_cap, top_tr, xh-w_blk, xh,
                                          width=math.floor(tr_wid))
             self.add_pin('top', top_pin)
@@ -140,10 +158,46 @@ class MIMCapCore(TemplateBase):
             else: 
                 bot_tr = grid.coord_to_track(bot_cap, (yh+yl)//2,
                                              mode=RoundMode.GREATER_EQ)
-                tr_wid = grid.coord_to_track(bot_cap, yh) \
-                    - grid.coord_to_track(bot_cap, yl)
-                bot_pin = self.add_wires(bot_cap, bot_tr, bot_pin_x+w_blk,
-                                         bot_pin_x+2*w_blk,
+                tr_wid = grid.coord_to_track(bot_cap, yh) - grid.coord_to_track(bot_cap, yl)
+                bot_pin = self.add_wires(bot_cap, bot_tr, bot_pin_x,
+                                         bot_pin_x+w_blk,
                                          width=math.floor(tr_wid))
             self.add_pin('bot', bot_pin)
+
+    
+        # draw metal resistors
+        if self.has_res_metal():
+            # _, _, barr_n, barr_p = cw_list[-1]
+            # TODO: check in process with resistor metals
+            box_p = BBox(int(xh-w_blk),
+                         int(mim_info.pin_bot_yl),
+                         int(xh), int(mim_info.pin_bot_yh))
+            box_n = BBox(int(xl), int(mim_info.pin_top_yl), 
+                         int(xl+w_blk), int(mim_info.pin_top_yh)
+                         )
+            top_dir = grid.get_direction(top_layer)
+            
+            res_w = box_p.get_dim(top_dir.perpendicular())
+            coord_c = box_p.get_center(top_dir)
+
+            res_w2 = res_w // 2
+            res_w4 = res_w2 // 2
+            wl_p = coord_c - res_w2
+            wu_p = coord_c + res_w2
+            wl_n = coord_c - res_w4
+            wu_n = coord_c + res_w4
+            box_p.set_interval(top_dir, wl_p, wu_p)
+            box_n.set_interval(top_dir, wl_n, wu_n)
+            self.add_res_metal(top_layer, box_p)
+            self.add_res_metal(top_layer, box_n)
+
+            res_w = grid.get_track_info(top_layer).width
+            self.sch_params = dict(
+                has_res_metal=True,
+                res_p=dict(layer=top_layer, w=res_w, l=res_w * 2),
+                res_n=dict(layer=top_layer, w=res_w, l=res_w * 2),
+            )
+            
+        else:
+            self.sch_params = dict(has_res_metal=False)
 
