@@ -63,11 +63,11 @@ class MIMCapCore(TemplateBase):
         return dict(
             top_layer='Top layer of MIM cap',
             bot_layer='Bottom layer of MIM cap',
-            height='height, in um',
             unit_height='height of single unit (for array)',
             unit_width='width of single unit (for array)',
-            width='used cap width',
-            width_total='cap width including dummies',
+            rows='number of rows',
+            columns='number of columns',
+            dum_columns='number of dummy columns',
             rotateable='True if horizontal cap, false if cap needs to be rotated vertically'
         )
 
@@ -77,11 +77,11 @@ class MIMCapCore(TemplateBase):
         ans.update(
             top_layer=0,
             bot_layer=0,
-            height=0,
             unit_height=0,
             unit_width=0,
-            width=0,
-            width_total=0,
+            rows=1,
+            columns=1,
+            dum_columns=0,
             rotateable=False
         )
         return ans
@@ -92,14 +92,12 @@ class MIMCapCore(TemplateBase):
 
         bot_layer: int = self.params['bot_layer']
         top_layer: int = self.params['top_layer']
-        width: int = self.params['width'] 
-        height: int = self.params['height'] 
         unit_width: int = self.params['unit_width'] 
         unit_height: int = self.params['unit_height'] 
-        width_total: int = self.params['width_total'] 
+        rows: int = self.params['rows'] 
+        columns: int = self.params['columns']
+        dum_columns: int = self.params['dum_columns']
         rotateable: bool = self.params['rotateable']
-        array = True if (unit_width < width_total or
-                         unit_height < height) else False
 
         top_cap = max(top_layer, bot_layer)
         bot_cap = min(top_layer, bot_layer)
@@ -109,18 +107,18 @@ class MIMCapCore(TemplateBase):
 
         # function in primitive
         mim_info: MIMLayInfo = tech_cls.get_mim_cap_info(top_cap,
-                                                         bot_cap, width_total,
-                                                         width, height, array,
+                                                         bot_cap, rows, columns, 
+                                                         dum_columns,
                                                          unit_width,
                                                          unit_height)
         draw_layout_in_template(self, mim_info.lay_info)
         layoutinfo = mim_info.lay_info
                      
         # get pin box info
-        xh = -(-layoutinfo.bound_box.xh//w_blk)*w_blk
+        xh = (layoutinfo.bound_box.xh//w_blk)*w_blk
         xl = -(-layoutinfo.bound_box.xl//w_blk)*w_blk
         yh = -(-layoutinfo.bound_box.yh//h_blk)*h_blk
-        yl = -(-layoutinfo.bound_box.yl//h_blk)*h_blk
+        yl = (layoutinfo.bound_box.yl//h_blk)*h_blk
 
         self.set_size_from_bound_box(top_cap, BBox(0, 0, xh, yh))
         bot_pin_x = -(-mim_info.pin_bot_xh//w_blk)*w_blk
@@ -138,12 +136,12 @@ class MIMCapCore(TemplateBase):
         else:
             top_dir = grid.get_direction(top_cap)
             if top_dir == Orient2D.y:
-                top_tr = grid.coord_to_track(top_cap, xh, mode=RoundMode.LESS)
+                top_tr = grid.coord_to_track(top_cap, xh, mode=RoundMode.LESS_EQ)
                 top_pin = self.add_wires(top_cap, top_tr, mim_info.pin_top_yl,
                                          mim_info.pin_top_yh)
             else:  
                 top_tr = grid.coord_to_track(top_cap, (yh+yl)//2, 
-                                             mode=RoundMode.LESS)
+                                             mode=RoundMode.LESS_EQ)
                 tr_wid = grid.coord_to_track(top_cap, yh) - grid.coord_to_track(top_cap, yl)
                 top_pin = self.add_wires(top_cap, top_tr, xh-w_blk, xh,
                                          width=math.floor(tr_wid))

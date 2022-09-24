@@ -79,15 +79,30 @@ class MIMTech(abc.ABC):
         for k, v in tech_info.config['mim'].items():
             self._mim_config[k] = v
 
+        self._grid_info = {}
+        for k, v in tech_info.config['lay_purp_list'].items():
+            grid_info = [v[0]]
+            for l, u in tech_info.config['width_intervals'].items():
+                if (l==k):
+                    grid_info.append(max(u[0][0][0], u[1][0][0]))
+            for l, u in tech_info.config['sp_min'].items():
+                if (l==v[0]):
+                    grid_info.append(u[0][1])
+            self._grid_info[k] = grid_info        
+
     @property
-    def mim_config(self) -> Dict[str, Any]:
+    def mim_config(self) -> Mapping[str, Any]:
         return self._mim_config
+    
+    @property
+    def grid_info(self) -> Mapping[str, Any]:
+        return self._grid_info
 
     # functions getting technology information 
     @abc.abstractmethod
     def get_mim_cap_info(self, top_layer: int,
-                         bot_layer: int, width_total: int,
-                         width: int, height: int, array: bool,
-                         unit_width: Optional[int],
-                         unit_height: Optional[int]) -> MIMLayInfo:
+                         bot_layer: int, rows: int, columns: int,
+                         dum_columns: int,
+                         unit_width: int,
+                         unit_height: int) -> MIMLayInfo:
         raise NotImplementedError('Not implemented')
