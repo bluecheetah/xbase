@@ -38,21 +38,20 @@ from bag.util.immutable import Param
 from bag.design.module import Module
 from bag.layout.template import TemplateDB, TemplateBase
 
-# from xbase.schematic.mimcap_core import xbase__mimcap_core
-from xbase.layout.data import draw_layout_in_template
-from xbase.layout.cap.tech import MIMTech, MIMLayInfo
+from ..data import draw_layout_in_template
+from .tech import MIMTech, MIMLayInfo
+from ...schematic.mimcap import xbase__mimcap
 
 
-class MIMCapCore(TemplateBase):
-    """MIMCap core
+class MIMCap(TemplateBase):
+    """MIMCap array with optional dummies
     """
     def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
         TemplateBase.__init__(self, temp_db, params, **kwargs)
 
     @classmethod
     def get_schematic_class(cls) -> Optional[Type[Module]]:
-        # return xbase__mimcap_core
-        return None
+        return xbase__mimcap
 
     @classmethod
     def get_params_info(cls) -> Mapping[str, str]:
@@ -115,9 +114,9 @@ class MIMCapCore(TemplateBase):
         bot_lp = self.grid.tech_info.get_lay_purp_list(bot_layer)[0]
         top_lp = self.grid.tech_info.get_lay_purp_list(top_layer)[0]
 
-        self.add_pin_primitive('bot', bot_lp[0], BBox(mim_info.pin_bot_xl, mim_info.pin_bot_y[0],
+        self.add_pin_primitive('BOT', bot_lp[0], BBox(mim_info.pin_bot_xl, mim_info.pin_bot_y[0],
                                                       mim_info.pin_bot_xl + bot_w, mim_info.pin_bot_y[1]))
-        self.add_pin_primitive('top', top_lp[0], BBox(mim_info.pin_top_xh - top_w, mim_info.pin_top_y[0],
+        self.add_pin_primitive('TOP', top_lp[0], BBox(mim_info.pin_top_xh - top_w, mim_info.pin_top_y[0],
                                                       mim_info.pin_top_xh, mim_info.pin_top_y[1]))
 
         # get schematic parameters

@@ -30,7 +30,7 @@
 
 # -*- coding: utf-8 -*-
 
-from typing import Mapping, Any, Optional
+from typing import Mapping, Any
 
 import pkg_resources
 from pathlib import Path
@@ -41,15 +41,15 @@ from bag.util.immutable import Param
 
 
 # noinspection PyPep8Naming
-class xbase__mimcap_core(Module):
-    """Module for library xbase cell mimcap_core.
+class xbase__mimcap(Module):
+    """Module for library xbase cell mimcap.
 
     Fill in high level description here.
     """
 
     yaml_file = pkg_resources.resource_filename(__name__,
                                                 str(Path('netlist_info',
-                                                         'mimcap_core.yaml')))
+                                                         'mimcap.yaml')))
 
     def __init__(self, database: ModuleDB, params: Param, **kwargs: Any) -> None:
         Module.__init__(self, self.yaml_file, database, params, **kwargs)
@@ -60,20 +60,26 @@ class xbase__mimcap_core(Module):
 
         Returns
         -------
-        param_info : Optional[Dict[str, str]]
+        param_info : Optional[Mapping[str, str]]
             dictionary from parameter names to descriptions.
         """
         return dict(
-            has_res_metal='True if res_metal exists in the process',
-            res_p='Parameters for metal resistor on plus terminal',
-            res_n='Parameters for metal resistor on minus terminal',
+            mim_type='Type of MIM cap; standard by default',
+            unit_width='width of single MIM unit (for array)',
+            unit_height='height of single MIM unit (for array)',
+            num_rows='number of rows',
+            num_cols='number of columns',
+            num_dum='number of dummy units',
         )
 
     @classmethod
     def get_default_param_values(cls) -> Mapping[str, Any]:
-        return dict(res_p=None, res_n=None)
+        return dict(
+            mim_type='standard',
+            num_dum=0,
+        )
 
-    def design(self,  res_p: Optional[Mapping[str, int]], res_n: Optional[Mapping[str, int]], has_res_metal: bool
+    def design(self, mim_type: str, unit_width: int, unit_height: int, num_rows: int, num_cols: int, num_dum: int
                ) -> None:
         """To be overridden by subclasses to design this module.
 
@@ -90,10 +96,15 @@ class xbase__mimcap_core(Module):
         restore_instance()
         array_instance()
         """
-        
-        if has_res_metal:
-            self.instances['XRESP'].design(**res_p)
-            self.instances['XRESN'].design(**res_n)
+        self.instances['XCAP'].design(unit_width=unit_width, unit_height=unit_height, num_rows=num_rows,
+                                      num_cols=num_cols, intent=mim_type)
+        # dummies
+        if num_dum == 0:
+            self.remove_instance('XDUM')
+            self.remove_instance('XNC0')
+            self.remove_instance('XNC1')
         else:
-            self.remove_instance('XRESP')
-            self.remove_instance('XRESN')
+            self.instances['XDUM'].design(unit_width=unit_width, unit_height=unit_height, num_rows=1,
+                                          num_cols=1, intent=mim_type)
+            suf = f'<{num_dum - 1}:0>' if num_dum > 1 else ''
+            self.rename_instance('XDUM', f'XDUM{suf}')

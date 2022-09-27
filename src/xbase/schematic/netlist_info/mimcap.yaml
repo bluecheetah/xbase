@@ -1,11 +1,11 @@
 lib_name: xbase
-cell_name: mimcap_core
+cell_name: mimcap
 view_name: schematic
 bbox:
   - -341
-  - -24
-  - 174
-  - 150
+  - -40
+  - 114
+  - 200
 terminals:
   bot:
     obj:
@@ -90,38 +90,14 @@ shapes:
     - 5
     - layer: 228
       purpose: 4294967295
-      net: top2
-      points:
-        -
-          - -90
-          - -20
-        -
-          - -90
-          - 20
-  -
-    - 5
-    - layer: 228
-      purpose: 4294967295
       net: top
       points:
         -
-          - -90
-          - 80
+          - -150
+          - 10
         -
-          - -90
-          - 120
-  -
-    - 5
-    - layer: 228
-      purpose: 4294967295
-      net: bot2
-      points:
-        -
-          - 80
-          - -20
-        -
-          - 80
-          - 20
+          - -150
+          - 50
   -
     - 5
     - layer: 228
@@ -129,36 +105,44 @@ shapes:
       net: bot
       points:
         -
-          - 80
-          - 80
+          - -150
+          - 110
         -
-          - 80
-          - 120
+          - -150
+          - 150
   -
-    - 7
+    - 5
     - layer: 228
-      purpose: 237
-      net: top
-      origin:
-        - -97
-        - 110
-      alignment: 5
-      orient: R90
-      font: 5
-      height: 10
-      overbar: false
-      visible: true
-      drafting: true
-      text: top
+      purpose: 4294967295
+      net: nc1
+      points:
+        -
+          - 20
+          - 10
+        -
+          - 20
+          - 50
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: nc0
+      points:
+        -
+          - 20
+          - 110
+        -
+          - 20
+          - 150
   -
     - 7
     - layer: 228
       purpose: 237
       net: bot
       origin:
-        - 73
-        - 110
-      alignment: 5
+        - -157
+        - 114
+      alignment: 2
       orient: R90
       font: 5
       height: 10
@@ -170,90 +154,157 @@ shapes:
     - 7
     - layer: 228
       purpose: 237
-      net: top2
+      net: nc0
       origin:
-        - -97
-        - 0
-      alignment: 5
+        - 13
+        - 114
+      alignment: 2
       orient: R90
       font: 5
       height: 10
       overbar: false
       visible: true
       drafting: true
-      text: top2
+      text: nc0
   -
     - 7
     - layer: 228
       purpose: 237
-      net: bot2
+      net: top
       origin:
-        - 73
-        - 0
-      alignment: 5
+        - -157
+        - 46
+      alignment: 8
       orient: R90
       font: 5
       height: 10
       overbar: false
       visible: true
       drafting: true
-      text: bot2
+      text: top
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: nc1
+      origin:
+        - 13
+        - 46
+      alignment: 8
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: nc1
 instances:
-  XRESN:
+  XCAP:
     lib_name: BAG_prim
-    cell_name: res_metal_1
+    cell_name: mim_standard
     view_name: symbol
     xform:
-      - 40
-      - 90
+      - -190
+      - 120
       - R0
     bbox:
-      - -52
-      - 16
-      - 174
-      - 90
+      - -268
+      - 46
+      - -56
+      - 120
     connections:
-      MINUS: bot2
-      PLUS: bot
+      BOT: bot
+      TOP: top
     params:
-      l:
+      num_cols:
         - 3
-        - 2u
-      w:
+        - 1
+      num_rows:
+        - 3
+        - 1
+      unit_height:
+        - 3
+        - 1u
+      unit_width:
         - 3
         - 1u
     is_primitive: true
-  XRESP:
+  XDUM:
     lib_name: BAG_prim
-    cell_name: res_metal_1
+    cell_name: mim_standard
     view_name: symbol
     xform:
-      - -130
-      - 90
+      - -20
+      - 120
       - R0
     bbox:
-      - -222
-      - 16
-      - 4
-      - 90
+      - -98
+      - 46
+      - 114
+      - 120
     connections:
-      MINUS: top2
-      PLUS: top
+      BOT: nc0
+      TOP: nc1
     params:
-      l:
+      num_cols:
         - 3
-        - 2u
-      w:
+        - 1
+      num_rows:
+        - 3
+        - 1
+      unit_height:
         - 3
         - 1u
+      unit_width:
+        - 3
+        - 1u
+    is_primitive: true
+  XNC0:
+    lib_name: basic
+    cell_name: noConn
+    view_name: symbol
+    xform:
+      - 20
+      - 150
+      - MX
+    bbox:
+      - 10
+      - 146
+      - 30
+      - 200
+    connections:
+      noConn: nc0
+    params:
+      {}
+    is_primitive: true
+  XNC1:
+    lib_name: basic
+    cell_name: noConn
+    view_name: symbol
+    xform:
+      - 20
+      - 10
+      - R0
+    bbox:
+      - 10
+      - -40
+      - 30
+      - 14
+    connections:
+      noConn: nc1
+    params:
+      {}
     is_primitive: true
 props:
   connectivityLastUpdated:
     - 0
-    - 1157
+    - 1618
+  instance#:
+    - 0
+    - 1
   lastSchematicExtraction:
     - 4
-    - time_val: 1663895200
+    - time_val: 1664238863
   net#:
     - 0
     - 0
@@ -262,7 +313,7 @@ props:
     - 2
   schGeometryLastUpdated:
     - 0
-    - 1157
+    - 1618
   schGeometryVersion:
     - 3
     - sch.ds.gm.1.4
@@ -272,10 +323,10 @@ props:
 app_defs:
   _dbLastSavedCounter:
     - 0
-    - 1157
+    - 1618
   _dbvCvTimeStamp:
     - 0
-    - 1157
+    - 1618
   cdbRevision:
     - 0
     - 227612

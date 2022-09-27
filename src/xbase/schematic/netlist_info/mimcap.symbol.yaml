@@ -1,5 +1,5 @@
 lib_name: xbase
-cell_name: mimcap_core
+cell_name: mimcap
 view_name: symbol
 bbox:
   - -4
@@ -176,7 +176,7 @@ props:
     - time_val: 1663895136
   partName:
     - 3
-    - mimcap_core
+    - mimcap
   pin#:
     - 0
     - 2
