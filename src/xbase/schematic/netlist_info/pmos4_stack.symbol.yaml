@@ -308,7 +308,7 @@ shapes:
       overbar: false
       visible: true
       drafting: true
-      text: "[@partName]"
+      text: "[@cellName]"
       evaluator: cdsNLPEvalText
   -
     - 4
@@ -887,10 +887,10 @@ props:
 app_defs:
   _dbLastSavedCounter:
     - 0
-    - 588
+    - 589
   _dbvCvTimeStamp:
     - 0
-    - 588
+    - 589
   cdbRevision:
     - 0
     - 227612
