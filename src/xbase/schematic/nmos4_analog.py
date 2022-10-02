@@ -64,10 +64,10 @@ class xbase__nmos4_analog(Module):
         # e.g.: 3_standard
         if intent.startswith('4_'):
             # Case 1: 4 terminal mos
-            mos_type = f'nmos4_{intent.split("_")[-1]}'
+            mos_type = f'nmos{intent}'
         elif intent.startswith('3_'):
             # Case 2: changing to 3 terminal mos
-            mos_type = f'nmos3_{intent.split("_")[-1]}'
+            mos_type = f'nmos{intent}'
         else:
             # Case 3: default case
             mos_type = f'nmos4_{intent}'
