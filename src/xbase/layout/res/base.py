@@ -21,7 +21,7 @@ from enum import IntEnum
 
 from typing import Any, Optional, Mapping, cast, Union, Tuple, Sequence
 
-from pybag.core import BBox, Transform
+from pybag.core import BBox, Transform, BBoxArray
 from pybag.enum import MinLenMode, RoundMode, Direction, Orientation
 
 from bag.util.immutable import Param, combine_hash
@@ -373,8 +373,17 @@ class ResArrayBase(ArrayBase, abc.ABC):
                 # connect BULK of every resistor unit, if it exists
                 if self.has_substrate_port:
                     bulk_bbox = self.get_device_port(xidx, yidx, 'BULK')
-                    self.connect_bbox_to_track_wires(Direction.LOWER, prim_lp, bulk_bbox, hm_warr_list[yidx])
-                    self.connect_bbox_to_track_wires(Direction.LOWER, prim_lp, bulk_bbox, hm_warr_list[yidx + 1])
+                    if isinstance(bulk_bbox, BBoxArray) and bulk_bbox.ny > 1:
+                        bulk_bbox0 = bulk_bbox.get_bbox(0)
+                        bulk_bbox1 = bulk_bbox.get_bbox(bulk_bbox.ny - 1)
+                        if yidx & 1:
+                            # Unit cell is placed in MX orientation in odd rows,
+                            # so top & bottom bulk connections are flipped
+                            bulk_bbox0, bulk_bbox1 = bulk_bbox1, bulk_bbox0
+                    else:
+                        bulk_bbox0 = bulk_bbox1 = bulk_bbox
+                    self.connect_bbox_to_track_wires(Direction.LOWER, prim_lp, bulk_bbox0, hm_warr_list[yidx])
+                    self.connect_bbox_to_track_wires(Direction.LOWER, prim_lp, bulk_bbox1, hm_warr_list[yidx + 1])
 
         # connect bottom and top hm_layer supply wires to vm_layer supply wires
         vm_tidx0 = self.grid.coord_to_track(vm_layer, 0, RoundMode.NEAREST)

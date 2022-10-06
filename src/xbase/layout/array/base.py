@@ -26,6 +26,7 @@ from pybag.core import Transform, BBox, BBoxArray
 from bag.util.math import HalfInt
 from bag.util.immutable import Param, combine_hash, ImmutableSortedDict
 from bag.layout.tech import TechInfo
+from bag.layout.core import PyLayInstance
 from bag.layout.routing.base import TrackID, TrackManager, WDictType, SpDictType, WireArray
 from bag.layout.template import TemplateBase, TemplateDB
 from bag.layout.routing.grid import RoutingGrid, TrackSpec
@@ -317,7 +318,7 @@ class ArrayBase(TemplateBase, abc.ABC):
 
         xform = Transform(dx, dy, orient)
         pins = self._unit.get_port(name).get_pins()
-        nx = len(pins)
+        nx = ny = len(pins)
         if nx == 1:
             return pins[0].get_transform(xform)
         else:
@@ -327,6 +328,8 @@ class ArrayBase(TemplateBase, abc.ABC):
                 return pins[0].get_transform(xform)
             else:  # List of BBox
                 pins = [cast(BBox, bbox) for bbox in pins]
+
+                # First, try to make BBoxArray with nx > 1
                 yl = pins[0].yl
                 yh = pins[0].yh
                 w = pins[0].w
@@ -334,12 +337,32 @@ class ArrayBase(TemplateBase, abc.ABC):
                 for pidx, pin in enumerate(pins[1:]):
                     if not (pin.yl == yl and pin.yh == yh and pin.w == w):
                         # cannot be combined into BBoxArray if yl, yh, w are not same
-                        return pins[0].get_transform(xform)
+                        break
                     if pidx != nx - 2:
                         if pins[pidx + 2].xm - pin.xm != spx:
                             # cannot be combined into BBoxArray if spx is not same
-                            return pins[0].get_transform(xform)
-                return BBoxArray(pins[0], nx, spx=spx).get_transform(xform)
+                            break
+                else:
+                    return BBoxArray(pins[0], nx=nx, spx=spx).get_transform(xform)
+
+                # Next, try to make BBoxArray with ny > 1
+                xl = pins[0].xl
+                xh = pins[0].xh
+                h = pins[0].h
+                spy = pins[1].ym - pins[0].ym
+                for pidx, pin in enumerate(pins[1:]):
+                    if not (pin.xl == xl and pin.xh == xh and pin.h == h):
+                        # cannot be combined into BBoxArray if xl, xh, h are not same
+                        break
+                    if pidx != ny - 2:
+                        if pins[pidx + 2].ym - pin.ym != spy:
+                            # cannot be combined into BBoxArray if spy is not same
+                            break
+                else:
+                    return BBoxArray(pins[0], ny=ny, spy=spy).get_transform(xform)
+
+                # both the for loops encountered break
+                return pins[0].get_transform(xform)
 
     def add_tile(self, master: ArrayBase, row_idx: int, col_idx: int, *,
                  flip_lr: bool = False, flip_ud: bool = False, commit: bool = True) -> PyLayInstance:
