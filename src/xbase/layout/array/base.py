@@ -176,6 +176,10 @@ class ArrayPlaceInfo:
         return self._ny
 
     @property
+    def is_top(self) -> bool:
+        return self._is_top
+
+    @property
     def blk_info(self) -> ArrayLayInfo:
         return self._blk_info
 
@@ -242,9 +246,9 @@ class ArrayBase(TemplateBase, abc.ABC):
         self.grid = info.grid
 
         # By default, only commit unit instances if info is the top ArrayPlaceInfo.
-        # If info is not top (i.e., a subset of another ArrayPlaceInfo, the unit array should be drawn at the top level.
+        # If info is not top (i.e. a subset of another ArrayPlaceInfo), the unit array should be drawn at the top level.
         if commit is None:
-            commit = info._is_top
+            commit = info.is_top
 
         self._unit = master = self.new_template(ArrayUnit, params=dict(desc=self.tech_cls.desc,
                                                                        blk_info=info.blk_info))
