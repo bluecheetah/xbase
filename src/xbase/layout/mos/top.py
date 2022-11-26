@@ -66,6 +66,7 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
         tech_cls = master.tech_cls
         bbox = master.bound_box
         used_arr = master.used_array
+        num_tiles = used_arr.num_tiles
 
         w_blk, h_blk = self.grid.get_block_size(top_layer,
                                                 half_blk_x=half_blk_x, half_blk_y=half_blk_y)
@@ -73,16 +74,15 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
         w_master = bbox.w
         h_master = bbox.h
         w_edge = tech_cls.get_edge_width(w_master, w_blk)
-        base_end_info = tech_cls.get_mos_base_end_info(master.place_info, h_blk)
+        bot_pinfo, _, bot_flip = used_arr.get_tile_info(0)
+        top_pinfo, _, top_flip = used_arr.get_tile_info(num_tiles - 1)
+        bot_rpinfo = bot_pinfo.get_row_place_info(-1) if bot_flip else bot_pinfo.get_row_place_info(0)
+        top_rpinfo = top_pinfo.get_row_place_info(0) if top_flip else top_pinfo.get_row_place_info(-1)
+        base_end_info = tech_cls.get_mos_base_end_info(bot_rpinfo, top_rpinfo, bot_flip, top_flip, h_blk)
 
         # get top/bottom boundary delta/height
-        num_tiles = used_arr.num_tiles
-        idx_bot = int(used_arr.get_flip_tile(0))
-        idx_top = int(not used_arr.get_flip_tile(num_tiles - 1))
-        dy_bot = base_end_info.h_blk[idx_bot]
-        dy_top = base_end_info.h_blk[idx_top]
-        h_end_bot = base_end_info.h_mos_end[idx_bot]
-        h_end_top = base_end_info.h_mos_end[idx_top]
+        dy_bot, dy_top = base_end_info.h_blk
+        h_end_bot, h_end_top = base_end_info.h_mos_end
 
         self._xform = Transform(w_edge, dy_bot)
         inst = self.add_instance(master, inst_name='X0', xform=self._xform)
@@ -273,7 +273,7 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
 
         cut_mode, bot_exty, top_exty = tech.get_extension_regions(re_bot, re_top, ext_h)
         if cut_mode.num_cut == 2 and bot_exty == top_exty == 0:
-            if be_bot[0].guard_ring and be_bot[0].fg_dev[0][1] is be_top[0].fg_dev[0][1]:
+            if be_bot[0].guard_ring and be_top[0].guard_ring and be_bot[0].fg_dev[0][1] is be_top[0].fg_dev[0][1]:
                 # this is extension within a guard ring
                 if len(be_bot) > 1:
                     fg_edge = be_bot[0].fg
