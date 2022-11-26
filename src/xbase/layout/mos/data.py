@@ -217,6 +217,7 @@ class MOSRowInfo:
     ds_g_conn_y: Tuple[int, int] = (0, 0)
     sub_conn_y: Tuple[int, int] = (0, 0)
     guard_ring: bool = False
+    guard_ring_col: bool = False
     double_gate: bool = False
     g2_conn_y: Tuple[int, int] = (0, 0)
     g2_m_conn_y: Tuple[int, int] = (0, 0)
@@ -233,6 +234,7 @@ class MOSRowInfo:
                           table['g_conn_y'], table['g_m_conn_y'], table['ds_conn_y'],
                           table['ds_m_conn_y'], table['ds_g_conn_y'], table['sub_conn_y'],
                           guard_ring=table.get('guard_ring', False),
+                          guard_ring_col=table.get('guard_ring_col', False),
                           double_gate=table.get('double_gate', False),
                           g2_conn_y=table.get('g2_conn_y', (0, 0)),
                           g2_m_conn_y=table.get('g2_m_conn_y', (0, 0)))
