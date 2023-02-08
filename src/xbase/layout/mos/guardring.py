@@ -96,68 +96,13 @@ class GuardRing(MOSBase):
         self._sch_cls = master.get_schematic_class_inst()
         tinfo_table = master.tile_table
 
-        # find out if ngr or pgr tiles have to appended on top or bottom
+        # construct TilePattern object, and call draw_base()
         bot_pinfo = tinfo_table[self._get_gr_name(master, False)]
-        bot_type = bot_pinfo.get_row_place_info(-1).row_info.row_type
         top_pinfo = tinfo_table[self._get_gr_name(master, True)]
-        top_type = top_pinfo.get_row_place_info(-1).row_info.row_type   # top tile is placed with flip=True
-        gr_types = []   # keep track of unfinished guard ring rows
-        gr_exists = False
-        for tile_idx in range(master.num_tile_rows):
-            cur_pinfo = master.get_tile_pinfo(tile_idx)
-            for ridx in range(cur_pinfo.num_rows):
-                row_info = cur_pinfo.get_row_place_info(ridx).row_info
-                row_type = row_info.row_type
-                if row_type.is_substrate and row_info.guard_ring:
-                    gr_exists = True
-                    if len(gr_types) > 0:
-                        if gr_types[-1] == row_type:
-                            # guard ring can be completed, hence depopulating
-                            gr_types.pop()
-                        else:
-                            gr_types.append(row_type)
-                    else:
-                        gr_types.append(row_type)
-
-        if not gr_exists:
-            # no guard ring row in pinfo, add bottom and top guard ring tiles
-            add_bot = add_top = True
-        else:
-            len_gr = len(gr_types)
-            if len_gr == 0:
-                add_bot = add_top = False
-            elif len_gr == 1:
-                gr_type = gr_types[0]
-                if gr_type == bot_type:
-                    if gr_type == top_type:
-                        raise ValueError('Cannot determine if ring should be completed on bottom or top. Explicitly '
-                                         'specify all guard ring tap rows in pinfo')
-                    add_bot = True
-                    add_top = False
-                else:
-                    if gr_type != top_type:
-                        raise ValueError('Invalid pinfo for drawing guard ring')
-                    add_bot = False
-                    add_top = True
-
-            elif len_gr == 2:
-                if not gr_types == [bot_type, top_type]:
-                    raise ValueError('Invalid pinfo for drawing guard ring')
-                add_bot = add_top = True
-            else:
-                raise ValueError('Invalid pinfo for drawing guard ring')
 
         # construct TilePattern object, and call draw_base()
-        tile_list = [master.get_tile_pattern_element()]
-        num_gr_tiles = 0
-        master_tidx = 0
-        if add_bot:
-            tile_list.insert(0, TilePatternElement(bot_pinfo))
-            num_gr_tiles += 1
-            master_tidx = 1
-        if add_top:
-            tile_list.append(TilePatternElement(top_pinfo, flip=True))
-            num_gr_tiles += 1
+        tile_list = [TilePatternElement(bot_pinfo), master.get_tile_pattern_element(),
+                     TilePatternElement(top_pinfo, flip=True)]
         self.draw_base((TilePattern(tile_list), tinfo_table))
 
         # get nmos/pmos guard ring type
@@ -174,9 +119,9 @@ class GuardRing(MOSBase):
         if sep_r < 0:
             sep_r = tech_cls.sub_sep_col
         ncol = master.num_cols + 2 * edge_ncol + sep_l + sep_r
-        ncol += ncol & 1
-        ntile = master.num_tile_rows + num_gr_tiles
-        inst = self.add_tile(master, master_tidx, edge_ncol + sep_l)
+        ncol += ncol & 1    # make ncol even for symmetry
+        ntile = master.num_tile_rows + 2
+        inst = self.add_tile(master, 1, edge_ncol + sep_l)
         self.set_mos_size(num_cols=ncol, num_tiles=ntile)
 
         if export_pins:
@@ -228,6 +173,8 @@ class GuardRing(MOSBase):
                     else:
                         vdd_vm_list.append(sub0)
                         vdd_vm_list.append(sub1)
+                else:
+                    self.error('mos row must have guard_ring=True or guard_ring_col=True.')
 
             sup_list.append((vss_hm_list, vdd_hm_list))
 
