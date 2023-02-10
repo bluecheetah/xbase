@@ -275,23 +275,59 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
         if cut_mode.num_cut == 2 and bot_exty == top_exty == 0:
             if be_bot[0].guard_ring and be_top[0].guard_ring and be_bot[0].fg_dev[0][1] is be_top[0].fg_dev[0][1]:
                 # this is extension within a guard ring
-                if len(be_bot) > 1:
-                    fg_edge = be_bot[0].fg
-                    fg_gr = fg_edge + be_bot[1].fg_dev[0][0]
+                gr_sub_type = gr2_sub_type = be_bot[0].fg_dev[0][1]
+                if tech.has_double_guard_ring:
+                    if len(be_bot) == 1:
+                        # this is extension between outer guard ring and inner guard ring on the bottom
+                        fg_edge = be_top[0].fg
+                        fg_gr = fg_edge + be_top[1].fg_dev[0][0]
+                        fg_edge2 = 0
+                        fg_gr2 = 0
+                    elif len(be_top) == 1:
+                        # this is extension between outer guard ring and inner guard ring on the top
+                        fg_edge = be_bot[0].fg
+                        fg_gr = fg_edge + be_bot[1].fg_dev[0][0]
+                        fg_edge2 = 0
+                        fg_gr2 = 0
+                    else:
+                        # this is extension inside inner guard ring
+                        _be = be_bot if len(be_bot) > len(be_top) else be_top
+                        fg_edge = _be[0].fg
+                        fg_gr = fg_edge + _be[1].fg_dev[0][0]
+                        fg_edge2 = _be[2].fg
+                        fg_gr2 = _be[2].fg + _be[3].fg_dev[0][0]
+                        gr2_sub_type = _be[2].fg_dev[0][1]
                 else:
-                    fg_edge = be_top[0].fg
-                    fg_gr = fg_edge + be_top[1].fg_dev[0][0]
+                    _be = be_bot if len(be_bot) > len(be_top) else be_top
+                    fg_edge = _be[0].fg
+                    fg_gr = fg_edge + _be[1].fg_dev[0][0]
+                    fg_edge2 = 0
+                    fg_gr2 = 0
 
-                ext_dx = fg_gr * tech.sd_pitch
-                ext_params = dict(lch=lch, num_cols=fg - 2 * fg_gr, height=ext_h, bot_info=re_bot,
+                ext_dx = (fg_gr + fg_edge2 + fg_gr2) * tech.sd_pitch
+                ext_params = dict(lch=lch, num_cols=fg - 2 * (fg_gr + fg_edge2 + fg_gr2), height=ext_h, bot_info=re_bot,
                                   top_info=re_top, gr_info=(fg_edge, fg_gr),
                                   arr_options=arr_options)
                 ext_master = self.new_template(MOSExt, params=ext_params, grid=grid)
+                edge_info = ext_master.edge_info
+
+                if fg_gr2 > 0:
+                    # add inner guard ring
+                    gr2_params = dict(lch=lch, num_cols=fg_gr2, edge_cols=fg_edge2, height=ext_h,
+                                      bot_info=re_bot, top_info=re_top, sub_type=gr2_sub_type,
+                                      einfo=edge_info, arr_options=arr_options)
+                    gr2_master = self.new_template(MOSExtGR, params=gr2_params, grid=grid)
+                    edge_info = gr2_master.edge_info
+
+                    dx2 = dx + (fg_gr + fg_edge2) * tech.sd_pitch
+                    self.add_instance(gr2_master, inst_name=f'{prefix}EXGRL2', xform=Transform(dx2, y0))
+                    self.add_instance(gr2_master, inst_name=f'{prefix}EXGRR2',
+                                      xform=Transform(w_tot - dx2, y0, Orientation.MY))
 
                 # add guard ring
                 gr_params = dict(lch=lch, num_cols=fg_gr, edge_cols=fg_edge, height=ext_h,
-                                 bot_info=re_bot, top_info=re_top, sub_type=be_bot[0].fg_dev[0][1],
-                                 einfo=ext_master.edge_info, arr_options=arr_options)
+                                 bot_info=re_bot, top_info=re_top, sub_type=gr_sub_type,
+                                 einfo=edge_info, arr_options=arr_options)
                 gr_master = self.new_template(MOSExtGR, params=gr_params, grid=grid)
                 edge_info = gr_master.edge_info
 

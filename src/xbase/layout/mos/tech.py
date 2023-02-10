@@ -132,6 +132,10 @@ class MOSTech(abc.ABC):
     def can_draw_double_gate(self) -> bool:
         raise NotImplementedError('Not implemented')
 
+    @property
+    def has_double_guard_ring(self) -> bool:
+        return False
+
     @abc.abstractmethod
     def get_track_specs(self, conn_layer: int, top_layer: int) -> List[TrackSpec]:
         return []
