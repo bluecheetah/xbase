@@ -373,8 +373,7 @@ class GenericWrapper(MOSBaseWrapper):
 
         def private_port_check(lay_id: int) -> bool:
             if lay_id <= top_layer and not grid.is_horizontal(lay_id):
-                print(f'WARNING: ports on private layer {lay_id} detected, '
-                      f'converting to primitive ports.')
+                self.warn(f'ports on private layer {lay_id} detected, converting to primitive ports.')
                 return True
             return False
 
