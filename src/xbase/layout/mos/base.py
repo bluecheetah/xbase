@@ -165,6 +165,11 @@ class MOSBase(TemplateBase, abc.ABC):
         """bool: True if double gates are supported."""
         return self.tech_cls.can_draw_double_gate
 
+    @property
+    def has_double_guard_ring(self) -> bool:
+        """bool: True if the PDK requires double guard ring."""
+        return self.tech_cls.has_double_guard_ring
+
     def draw_base(self, obj: Union[MOSBasePlaceInfo,
                                    TilePatternElement,
                                    Tuple[Union[MOSBasePlaceInfo, TilePattern,

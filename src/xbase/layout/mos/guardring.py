@@ -24,7 +24,7 @@ from bag.util.importlib import import_class
 from bag.layout.routing.base import WireArray
 from bag.layout.template import TemplateDB, PyLayInstance
 
-from ..enum import MOSWireType
+from ..enum import MOSWireType, MOSType
 
 from .placement.data import TilePatternElement, TilePattern
 from .base import MOSBase
@@ -119,9 +119,13 @@ class GuardRing(MOSBase):
         if sep_r < 0:
             sep_r = tech_cls.sub_sep_col
         ncol = master.num_cols + 2 * edge_ncol + sep_l + sep_r
-        ncol += ncol & 1    # make ncol even for symmetry
         ntile = master.num_tile_rows + 2
-        inst = self.add_tile(master, 1, edge_ncol + sep_l)
+        master_col = edge_ncol + sep_l
+        if self.has_double_guard_ring:
+            ncol += 2 * edge_ncol + sep_l + sep_r
+            master_col += edge_ncol + sep_l
+        inst = self.add_tile(master, 1, master_col)
+        ncol += ncol & 1    # make ncol even for symmetry
         self.set_mos_size(num_cols=ncol, num_tiles=ntile)
 
         if export_pins:
@@ -146,9 +150,30 @@ class GuardRing(MOSBase):
                 row_type = row_info.row_type
                 if row_type.is_substrate and row_info.guard_ring:
                     tid = self.get_track_id(ridx, MOSWireType.DS, 'guard', tile_idx=tile_idx)
-                    sub = self.add_substrate_contact(ridx, 0, tile_idx=tile_idx, seg=ncol)
-                    warr = self.connect_to_tracks(sub, tid)
                     coord = grid.track_to_coord(hm_layer, tid.base_index)
+                    if row_info.guard_ring_col:
+                        # both guard_ring and guard_ring_col are True,
+                        # so this is the top or bottom row of inner guard ring
+                        assert self.has_double_guard_ring, 'If the PDK does not have double guard ring, the mos row ' \
+                                                           'cannot have both guard_ring=True and guard_ring_col=True'
+                        sub_col = edge_ncol + sep_l
+                        sub_seg = ncol - 2 * edge_ncol - sep_l - sep_r
+                        sub_lr_type = pmos_sub_type if row_type.is_n_plus else nmos_sub_type
+                        sub_l = self.add_substrate_contact(ridx, 0, tile_idx=tile_idx, seg=edge_ncol,
+                                                           guard_ring=True, sub_type=sub_lr_type)
+                        sub_r = self.add_substrate_contact(ridx, ncol, tile_idx=tile_idx, seg=edge_ncol,
+                                                           guard_ring=True, flip_lr=True, sub_type=sub_lr_type)
+                        if sub_lr_type.is_pwell:
+                            vss_vm_list.extend([sub_l, sub_r])
+                        else:
+                            vdd_vm_list.extend([sub_l, sub_r])
+                    else:
+                        # this is the top or bottom row of outer guard ring
+                        sub_col = 0
+                        sub_seg = ncol
+
+                    sub = self.add_substrate_contact(ridx, sub_col, tile_idx=tile_idx, seg=sub_seg)
+                    warr = self.connect_to_tracks(sub, tid)
                     if row_type.is_pwell:
                         vss_hm_list.append(warr)
                         vss_hm_keys.append(coord)
@@ -168,11 +193,21 @@ class GuardRing(MOSBase):
                                                       guard_ring=True, flip_lr=True,
                                                       sub_type=sub_type)
                     if sub_type.is_pwell:
-                        vss_vm_list.append(sub0)
-                        vss_vm_list.append(sub1)
+                        vss_vm_list.extend([sub0, sub1])
                     else:
-                        vdd_vm_list.append(sub0)
-                        vdd_vm_list.append(sub1)
+                        vdd_vm_list.extend([sub0, sub1])
+
+                    if self.has_double_guard_ring:
+                        sub_lr_type = MOSType.ptap if sub_type is MOSType.ntap else MOSType.ntap
+                        sub_l = self.add_substrate_contact(ridx, edge_ncol + sep_l, tile_idx=tile_idx, seg=edge_ncol,
+                                                           guard_ring=True, sub_type=sub_lr_type)
+                        sub_r = self.add_substrate_contact(ridx, ncol - edge_ncol - sep_r, tile_idx=tile_idx,
+                                                           seg=edge_ncol, guard_ring=True, flip_lr=True,
+                                                           sub_type=sub_lr_type)
+                        if sub_lr_type.is_pwell:
+                            vss_vm_list.extend([sub_l, sub_r])
+                        else:
+                            vdd_vm_list.extend([sub_l, sub_r])
                 else:
                     self.error('mos row must have guard_ring=True or guard_ring_col=True.')
 
