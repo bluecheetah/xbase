@@ -128,6 +128,14 @@ class MOSTech(abc.ABC):
         raise NotImplementedError('Not implemented')
 
     @property
+    def can_abut_mos(self) -> bool:
+        return True
+
+    # noinspection PyMethodMayBeStatic
+    def can_extend_ds_conn(self, g_side: bool, threshold: str) -> bool:
+        return True
+
+    @property
     @abc.abstractmethod
     def can_draw_double_gate(self) -> bool:
         raise NotImplementedError('Not implemented')

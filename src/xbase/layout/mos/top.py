@@ -416,7 +416,11 @@ class GenericWrapper(MOSBaseWrapper):
         # re-export pins
         for name in inst.port_names_iter():
             if not master.get_port(name).hidden or export_hidden:
-                self.reexport(inst.get_primitive_port(name, private_port_check))
+                if name in self._port_params:
+                    show = self._port_params[name]['show']
+                else:
+                    show = None
+                self.reexport(inst.get_primitive_port(name, private_port_check), show=show)
 
         # pass out schematic parameters
         self.sch_params = master.sch_params

@@ -161,6 +161,25 @@ class MOSBase(TemplateBase, abc.ABC):
         return self.tech_cls.can_short_adj_tracks(self.conn_layer)
 
     @property
+    def can_abut_mos(self) -> bool:
+        """bool: True if you can abut mos by sharing drain or source."""
+        return self.tech_cls.can_abut_mos
+
+    def can_extend_ds_conn(self, g_side: bool, threshold: str) -> bool:
+        """
+        Parameters
+        ----------
+        g_side : bool
+            True for checking for extension on gate side, False for checking on the other side
+        threshold : str
+            Threshold of mos in the row
+        Returns
+        -------
+        ans : bool
+            True if you extend drain or source on conn_layer, on the gate side or the other side."""
+        return self.tech_cls.can_extend_ds_conn(g_side, threshold)
+
+    @property
     def can_draw_double_gate(self) -> bool:
         """bool: True if double gates are supported."""
         return self.tech_cls.can_draw_double_gate
