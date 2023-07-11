@@ -127,8 +127,8 @@ class MOSTech(abc.ABC):
     def can_short_adj_tracks(self, conn_layer: int) -> bool:
         raise NotImplementedError('Not implemented')
 
-    @property
-    def can_abut_mos(self) -> bool:
+    # noinspection PyMethodMayBeStatic
+    def can_abut_mos(self, row_info: MOSRowInfo) -> bool:
         return True
 
     # noinspection PyMethodMayBeStatic

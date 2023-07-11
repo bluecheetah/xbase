@@ -160,10 +160,9 @@ class MOSBase(TemplateBase, abc.ABC):
         """bool: True if you can short adjacent transistor ports using hm_layer."""
         return self.tech_cls.can_short_adj_tracks(self.conn_layer)
 
-    @property
-    def can_abut_mos(self) -> bool:
+    def can_abut_mos(self, row_info: MOSRowInfo) -> bool:
         """bool: True if you can abut mos by sharing drain or source."""
-        return self.tech_cls.can_abut_mos
+        return self.tech_cls.can_abut_mos(row_info)
 
     def can_extend_ds_conn(self, g_side: bool, threshold: str) -> bool:
         """
