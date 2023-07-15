@@ -164,7 +164,8 @@ class MOSCharCore(MOSBase):
         else:
             s_duml = duml.s
             s_dumr = dumr.s
-            dum_info = [((mos_type_str, w, lch, intent, '', ''), 2 * fg_dum)]
+            dum_info = [((mos_type_str, w, lch, intent, '', ''), fg_dum),
+                        ((mos_type_str, w, lch, intent, '', ''), fg_dum)]
         b_warrs0 = [b_bot, duml.d, dumr.d, s_duml, s_dumr]
         b_warrs1 = [b_top, duml.d, dumr.d, s_duml, s_dumr]
         b_warrs0.extend(vdd_list)

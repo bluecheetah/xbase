@@ -40,7 +40,7 @@ class ViaTest(TemplateBase):
         num_w = 20
         for tdx in range(1, num_w + 1):
             bdx = self.grid.get_min_track_width(bot_layer, top_ntr=tdx)
-            print(f'For top layer track_w = {tdx}, minimum bot layer track_w = {bdx}')
+            self.log(f'For top layer track_w = {tdx}, minimum bot layer track_w = {bdx}')
         cur_idx_h, cur_idx_v = 0, 0
         for hdx in range(1, num_w + 1):
             h_min_len = self.grid.get_next_length(hlayer, hdx, 0, even=True)
@@ -57,7 +57,7 @@ class ViaTest(TemplateBase):
                 try:
                     self.connect_to_track_wires(h_wire, v_wire)
                 except RuntimeError:
-                    print(f'No possible via between hlayer track_w = {hdx} and vlayer track_w = {vdx}')
+                    self.warn(f'No possible via between hlayer track_w = {hdx} and vlayer track_w = {vdx}')
                 cur_idx_v = self.get_next_track(vlayer, vdx, vdx + 1, cur_idx_v)
 
         w_tot = self.grid.track_to_coord(vlayer, cur_idx_v)
