@@ -74,3 +74,5 @@ class xbase__mos_char(Module):
             self.design_dummy_transistors(dum_info, 'XD', 'b', 'b')
         else:
             self.remove_instance('XD')
+            if intent.startswith('3_'):
+                self.remove_pin('b')

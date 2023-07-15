@@ -70,6 +70,10 @@ class MOSCharCore(MOSBase):
         tr_widths = self.params['tr_widths']
         tr_spaces = self.params['tr_spaces']
 
+        assert seg & 1 == 0, f'This generator requires seg={seg} to be even. MOS characterization results are ' \
+                             f'reported per finger, so this restriction is not an issue.'
+        assert fg_dum & 1 == 0, f'This generator requires fg_dum={fg_dum} to be even.'
+
         mos_type: MOSType = MOSType[mos_type_str]
         if mos_type.is_substrate:
             raise ValueError('Can only draw transistors.')
@@ -106,42 +110,70 @@ class MOSCharCore(MOSBase):
 
         self.draw_base(pinfo)
 
-        fg_tot = fg_dum * 2 + seg * stack
-        self.set_mos_size(fg_tot)
+        tap_ncols = self.get_tap_ncol()
+        seg_sep = self.min_sep_col
+        seg_sep_sub = self.sub_sep_col
+        row_info = pinfo.get_row_place_info(1).row_info
 
-        b_bot = self.add_substrate_contact(0, 0, seg=fg_tot)
-        b_top = self.add_substrate_contact(2, 0, seg=fg_tot)
-        mos = self.add_mos(1, fg_dum, seg, stack=stack, abut=True)
+        # --- Placement --- #
+        # Row 1: tap, dum, mos, dum, tap
+        vdd_list, vss_list = [], []
+        cur_col = 0
+        self.add_tap(cur_col, vdd_list, vss_list)
+        cur_col += tap_ncols + seg_sep_sub
+        duml = self.add_mos(1, cur_col, fg_dum)
+        cur_col += fg_dum
+        if not self.can_abut_mos(row_info):
+            cur_col += seg_sep
+        mos = self.add_mos(1, cur_col, seg, stack=stack, abut=True)
+        cur_col += seg * stack
+        if not self.can_abut_mos(row_info):
+            cur_col += seg_sep
+        cur_col += fg_dum
+        dumr = self.add_mos(1, cur_col, fg_dum, flip_lr=True)
+        cur_col += seg_sep_sub + tap_ncols
+        self.add_tap(cur_col, vdd_list, vss_list, flip_lr=True)
 
+        self.set_mos_size(cur_col)
+
+        # Rows 0 and 2: substrate rows
+        b_bot = self.add_substrate_contact(0, 0, seg=cur_col)
+        b_top = self.add_substrate_contact(2, 0, seg=cur_col)
+
+        # --- Routing --- #
         d_tid = self.get_track_id(1, MOSWireType.DS, 'd')
+        d = self.connect_to_tracks(mos.d, d_tid)
+        self.add_pin('d', d)
+
         g_tid = self.get_track_id(1, MOSWireType.G, 'g')
+        g = self.connect_to_tracks(mos.g, g_tid)
+        self.add_pin('g', g)
+
         s_tid = self.get_track_id(1, MOSWireType.DS, 's')
+        s = self.connect_to_tracks(mos.s, s_tid)
+        self.add_pin('s', s)
+
         b_tid0 = self.get_track_id(0, MOSWireType.DS, 'b')
         b_tid1 = self.get_track_id(2, MOSWireType.DS, 'b')
 
-        d = self.connect_to_tracks(mos.d, d_tid)
-        g = self.connect_to_tracks(mos.g, g_tid)
-        s = self.connect_to_tracks(mos.s, s_tid)
-
-        # TODO: support dummy transistors
-        # duml = self.add_mos(1, 0, fg_dum)
-        # dumr = self.add_mos(1, fg_tot, fg_dum, flip_lr=True)
-        # s_duml = duml.s[:-1]
-        # s_dumr = dumr.s[:-1]
-        # b_warrs0 = [b_bot, duml.d, dumr.d, s_duml, s_dumr]
-        # b_warrs1 = [b_top, duml.d, dumr.d, s_duml, s_dumr]
-        # b0 = self.connect_to_tracks(b_warrs0, b_tid0)
-        # b1 = self.connect_to_tracks(b_warrs1, b_tid1)
-        b0 = self.connect_to_tracks(b_bot, b_tid0)
-        b1 = self.connect_to_tracks(b_top, b_tid1)
-
-        self.add_pin('d', d)
-        self.add_pin('g', g)
-        self.add_pin('s', s)
-        # self.add_pin('b', b0)
-        # self.add_pin('b', b1)
-        self.add_pin('b', b0, label='b:')
-        self.add_pin('b', b1, label='b:')
+        if self.can_abut_mos(row_info):
+            s_duml = duml.s[:-1]
+            s_dumr = dumr.s[:-1]
+            dum_info = [((mos_type_str, w, lch, intent, '', ''), 2 * fg_dum - 2),
+                        ((mos_type_str, w, lch, intent, 's', ''), 2)]
+        else:
+            s_duml = duml.s
+            s_dumr = dumr.s
+            dum_info = [((mos_type_str, w, lch, intent, '', ''), 2 * fg_dum)]
+        b_warrs0 = [b_bot, duml.d, dumr.d, s_duml, s_dumr]
+        b_warrs1 = [b_top, duml.d, dumr.d, s_duml, s_dumr]
+        b_warrs0.extend(vdd_list)
+        b_warrs0.extend(vss_list)
+        b_warrs1.extend(vdd_list)
+        b_warrs1.extend(vss_list)
+        b0 = self.connect_to_tracks(b_warrs0, b_tid0)
+        b1 = self.connect_to_tracks(b_warrs1, b_tid1)
+        self.add_pin('b', [b0, b1])
 
         self.sch_params = dict(
             mos_type=mos_type_str,
@@ -150,8 +182,7 @@ class MOSCharCore(MOSBase):
             seg=seg,
             intent=intent,
             stack=stack,
-            dum_info=[],
-            # dum_info=[((mos_type_str, w, lch, intent, '', 's'), 2 * fg_dum)],
+            dum_info=dum_info,
         )
 
 
