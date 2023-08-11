@@ -243,6 +243,36 @@ class ResArrayBase(ArrayBase, abc.ABC):
 
         return bot_vm, top_vm
 
+    def snake_connect_units(self, warrs: Mapping[int, Mapping[ResTermType, np.ndarray]], x0: int, x1: int,
+                            y0: int, y1: int) -> Tuple[WireArray, WireArray]:
+        """Connect all unit resistors to have snaking series connection from x0 to x1 and from y0 to y1.
+        Returns first and last vm_layer WireArrays."""
+        hm_layer = self.conn_layer + 1
+        vm_layer = hm_layer + 1
+
+        # across all columns, connect row units in series
+        for yidx in range(y0, y1 - 1):
+            self.connect_wires(warrs[vm_layer][ResTermType.TOP][:, yidx].tolist() +
+                               warrs[vm_layer][ResTermType.BOT][:, yidx + 1].tolist())
+
+        # snake connect the top and bottom rows
+        for xidx in range(x0, x1 - 1):
+            if (xidx - x0) & 1:
+                # connect on bottom row
+                self.connect_wires([warrs[hm_layer][ResTermType.BOT][xidx, y0],
+                                    warrs[hm_layer][ResTermType.BOT][xidx + 1, y0]])
+            else:
+                # connect on top row
+                self.connect_wires([warrs[hm_layer][ResTermType.TOP][xidx, y1 - 1],
+                                    warrs[hm_layer][ResTermType.TOP][xidx + 1, y1 - 1]])
+
+        vm0 = warrs[vm_layer][ResTermType.BOT][x0, y0]  # bottom left
+        if (x1 - x0) & 1:
+            vm1 = warrs[vm_layer][ResTermType.TOP][x1 - 1, y1 - 1]  # top right
+        else:
+            vm1 = warrs[vm_layer][ResTermType.BOT][x1 - 1, y0]  # bottom right
+        return vm0, vm1
+
     def connect_dummies(self, warrs: Mapping[int, Mapping[ResTermType, np.ndarray]],
                         bulk_warrs: Mapping[int, Union[WireArray, Sequence[WireArray]]]) -> None:
         """Connect all the dummy resistors for the case where dummies are on the periphery."""
