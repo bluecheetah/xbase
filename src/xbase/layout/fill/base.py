@@ -55,6 +55,7 @@ class DeviceFill(TemplateBase):
         return dict(
             mos_type='',
             threshold='',
+            edges=(Param(), Param(), Param(), Param()),
         )
 
     def draw_layout(self):

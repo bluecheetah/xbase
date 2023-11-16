@@ -1,26 +1,11 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright 2020 Blue Cheetah Analog Design Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 lib_name: xbase
 cell_name: momcap_core
 view_name: symbol
 bbox:
-  - 112
-  - -20
-  - 358
-  - 36
+  - -4
+  - 0
+  - 184
+  - 120
 terminals:
   minus:
     obj:
@@ -29,10 +14,10 @@ terminals:
         purpose: 4294967295
         net: ""
         bbox:
-          - 236
-          - -4
-          - 244
-          - 4
+          - 176
+          - 56
+          - 184
+          - 64
     stype: 0
     ttype: 2
   plus:
@@ -42,33 +27,21 @@ terminals:
         purpose: 4294967295
         net: ""
         bbox:
-          - 166
           - -4
-          - 174
+          - 56
           - 4
+          - 64
     stype: 0
     ttype: 2
 shapes:
-  -
-    - 5
-    - layer: 231
-      purpose: 4294967295
-      net: ""
-      points:
-        -
-          - 210
-          - 10
-        -
-          - 210
-          - -10
   -
     - 7
     - layer: 229
       purpose: 237
       net: ""
       origin:
-        - 136
-        - 0
+        - 6
+        - 70
       alignment: 1
       orient: R0
       font: 5
@@ -78,25 +51,13 @@ shapes:
       drafting: true
       text: plus
   -
-    - 5
-    - layer: 231
-      purpose: 4294967295
-      net: ""
-      points:
-        -
-          - 200
-          - 10
-        -
-          - 200
-          - -10
-  -
     - 7
     - layer: 229
       purpose: 237
       net: ""
       origin:
-        - 294
-        - 0
+        - 174
+        - 70
       alignment: 7
       orient: R0
       font: 5
@@ -106,25 +67,23 @@ shapes:
       drafting: true
       text: minus
   -
-    - 5
-    - layer: 231
+    - 0
+    - layer: 236
       purpose: 4294967295
       net: ""
-      points:
-        -
-          - 200
-          - 0
-        -
-          - 170
-          - 0
+      bbox:
+        - 0
+        - 0
+        - 180
+        - 120
   -
     - 8
     - layer: 236
       purpose: 237
       net: ""
       origin:
-        - 230
-        - 30
+        - 50
+        - 110
       alignment: 1
       orient: R0
       font: 5
@@ -140,8 +99,8 @@ shapes:
       purpose: 237
       net: ""
       origin:
-        - 160
-        - 30
+        - 70
+        - 90
       alignment: 4
       orient: R0
       font: 5
@@ -157,10 +116,10 @@ shapes:
       purpose: 4294967295
       net: ""
       bbox:
-        - 170
-        - -20
-        - 240
         - 20
+        - 20
+        - 160
+        - 100
   -
     - 5
     - layer: 231
@@ -168,17 +127,53 @@ shapes:
       net: ""
       points:
         -
-          - 210
-          - 0
+          - 80
+          - 80
         -
-          - 240
+          - 80
+          - 40
+  -
+    - 5
+    - layer: 231
+      purpose: 4294967295
+      net: ""
+      points:
+        -
+          - 100
+          - 80
+        -
+          - 100
+          - 40
+  -
+    - 5
+    - layer: 231
+      purpose: 4294967295
+      net: ""
+      points:
+        -
+          - 80
+          - 60
+        -
           - 0
+          - 60
+  -
+    - 5
+    - layer: 231
+      purpose: 4294967295
+      net: ""
+      points:
+        -
+          - 100
+          - 60
+        -
+          - 180
+          - 60
 instances:
   {}
 props:
   interfaceLastChanged:
     - 4
-    - time_val: 1554916690
+    - time_val: 1610164038
   partName:
     - 3
     - momcap_core
@@ -195,13 +190,10 @@ props:
 app_defs:
   _dbLastSavedCounter:
     - 0
-    - 63
+    - 89
   _dbvCvTimeStamp:
     - 0
-    - 63
+    - 89
   cdbRevision:
     - 0
     - 227612
-  cdnSPDesignMajorVersion:
-    - 0
-    - 2

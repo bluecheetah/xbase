@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Tuple, Dict, Any, List, Mapping
+from typing import Tuple, Dict, Any, List, Mapping
 
 import abc
 import math
@@ -34,11 +34,8 @@ from ..enum import MOSType, MOSCutMode, MOSAbutMode
 
 from .data import (
     MOSRowSpecs, MOSRowInfo, RowExtInfo, MOSEdgeInfo, MOSLayInfo, ExtWidthInfo, ExtEndLayInfo,
-    MOSBaseEndInfo, BlkExtInfo
+    MOSBaseEndInfo, BlkExtInfo, RowPlaceInfo
 )
-
-if TYPE_CHECKING:
-    from .base import MOSBasePlaceInfo
 
 
 def _get_end_block_info(h_ext: int, h_end_min: int, blk_h: int) -> Tuple[int, int]:
@@ -106,6 +103,12 @@ class MOSTech(abc.ABC):
         raise NotImplementedError('Not implemented')
 
     @property
+    def gr_sub_sep_col(self) -> int:
+        """int: column separation needed between guard ring substrate and inner substrate.
+        """
+        return self.sub_sep_col
+
+    @property
     @abc.abstractmethod
     def min_sub_col(self) -> int:
         raise NotImplementedError('Not implemented')
@@ -123,6 +126,23 @@ class MOSTech(abc.ABC):
     @abc.abstractmethod
     def can_short_adj_tracks(self, conn_layer: int) -> bool:
         raise NotImplementedError('Not implemented')
+
+    # noinspection PyMethodMayBeStatic
+    def can_abut_mos(self, row_info: MOSRowInfo) -> bool:
+        return True
+
+    # noinspection PyMethodMayBeStatic
+    def can_extend_ds_conn(self, g_side: bool, threshold: str) -> bool:
+        return True
+
+    @property
+    @abc.abstractmethod
+    def can_draw_double_gate(self) -> bool:
+        raise NotImplementedError('Not implemented')
+
+    @property
+    def has_double_guard_ring(self) -> bool:
+        return False
 
     @abc.abstractmethod
     def get_track_specs(self, conn_layer: int, top_layer: int) -> List[TrackSpec]:
@@ -239,14 +259,18 @@ class MOSTech(abc.ABC):
         sd_constants: Tuple[int, int] = self.mos_config['sd_pitch_constants']
         return sd_constants[0] + self.lch * sd_constants[1]
 
-    def get_mos_base_end_info(self, pinfo: MOSBasePlaceInfo, blk_pitch: int) -> MOSBaseEndInfo:
+    def get_mos_base_end_info(self, bot_rpinfo: RowPlaceInfo, top_rpinfo: RowPlaceInfo, bot_flip: bool, top_flip: bool,
+                              blk_pitch: int) -> MOSBaseEndInfo:
         blk_pitch = lcm([self.blk_h_pitch, blk_pitch])
 
-        bot_rpinfo = pinfo.get_row_place_info(0)
-        top_rpinfo = pinfo.get_row_place_info(-1)
-
-        h_ext_bot = bot_rpinfo.yb_blk - bot_rpinfo.yb
-        h_ext_top = top_rpinfo.yt - top_rpinfo.yt_blk
+        if bot_flip:
+            h_ext_bot = bot_rpinfo.yt - bot_rpinfo.yt_blk
+        else:
+            h_ext_bot = bot_rpinfo.yb_blk - bot_rpinfo.yb
+        if top_flip:
+            h_ext_top = top_rpinfo.yb_blk - top_rpinfo.yb
+        else:
+            h_ext_top = top_rpinfo.yt - top_rpinfo.yt_blk
 
         h_end_min = self.end_h_min
         h_mos_end_bot, h_blk_bot = _get_end_block_info(h_ext_bot, h_end_min, blk_pitch)

@@ -53,15 +53,21 @@ class RowPlaceSpecs:
     top_conn_y_table: ImmutableSortedDict[MOSWireType, Tuple[int, int]]
     bot_ext_info: RowExtInfo
     top_ext_info: RowExtInfo
+    mid_conn_y_table: Optional[ImmutableSortedDict[MOSWireType, Tuple[int, int]]]
 
     def __init__(self, row_specs: MOSRowSpecs, row_info: MOSRowInfo,
                  bot_conn_y_table: Mapping[MOSWireType, Tuple[int, int]],
                  top_conn_y_table: Mapping[MOSWireType, Tuple[int, int]],
-                 bot_ext_info: RowExtInfo, top_ext_info: RowExtInfo):
+                 bot_ext_info: RowExtInfo, top_ext_info: RowExtInfo,
+                 mid_conn_y_table: Optional[Mapping[MOSWireType, Tuple[int, int]]] = None):
+        if not mid_conn_y_table:
+            mid_conn_y_table = {}
+
         # work around: this is how you set attributes for frozen data classes
         object.__setattr__(self, 'row_specs', row_specs)
         object.__setattr__(self, 'row_info', row_info)
         object.__setattr__(self, 'bot_conn_y_table', ImmutableSortedDict(bot_conn_y_table))
+        object.__setattr__(self, 'mid_conn_y_table', ImmutableSortedDict(mid_conn_y_table))
         object.__setattr__(self, 'top_conn_y_table', ImmutableSortedDict(top_conn_y_table))
         object.__setattr__(self, 'bot_ext_info', bot_ext_info)
         object.__setattr__(self, 'top_ext_info', top_ext_info)
@@ -88,6 +94,7 @@ class PlaceFun:
 
 def _get_row_place_specs(tcls: MOSTech, specs_list: Sequence[MOSRowSpecs],
                          global_options: Param) -> Sequence[RowPlaceSpecs]:
+    """For each MOSRowSpecs, construct MOSRowInfo and RowPlaceSpecs"""
     conn_layer = tcls.conn_layer
 
     num_rows = len(specs_list)
@@ -114,6 +121,11 @@ def _get_row_place_specs(tcls: MOSTech, specs_list: Sequence[MOSRowSpecs],
                             for wtype in row_info.bot_conn_types}
         top_conn_y_table = {wtype: row_info.get_conn_y(wtype)
                             for wtype in row_info.top_conn_types}
+        if specs.double_gate:
+            mid_conn_y_table = {wtype: row_info.get_conn_y(wtype)
+                                for wtype in row_info.mid_conn_types}
+        else:
+            mid_conn_y_table = {}
 
         if specs.flip:
             bext_info = row_info.top_ext_info
@@ -123,17 +135,18 @@ def _get_row_place_specs(tcls: MOSTech, specs_list: Sequence[MOSRowSpecs],
             text_info = row_info.top_ext_info
 
         info_list.append(RowPlaceSpecs(specs, row_info, bot_conn_y_table, top_conn_y_table,
-                                       bext_info, text_info))
+                                       bext_info, text_info, mid_conn_y_table=mid_conn_y_table))
 
     return info_list
 
 
 def _place_mirror(tech_cls: MOSTech, ext_info: RowExtInfo, ycur: int, ignore_vm_sp_le: bool = False
                   ) -> Tuple[int, int]:
+    """Extend the current extention such that it can be mirrored"""
     blk_h_pitch = tech_cls.blk_h_pitch
 
-    mirror_ext_w_info = tech_cls.get_ext_width_info(ext_info, ext_info,
-                                                    ignore_vm_sp_le=ignore_vm_sp_le)
+    mirror_ext_w_info: ExtWidthInfo = tech_cls.get_ext_width_info(ext_info, ext_info,
+                                                                  ignore_vm_sp_le=ignore_vm_sp_le)
 
     ext_w_cur = ycur // blk_h_pitch
     ext_w_tot = mirror_ext_w_info.get_next_width(2 * ext_w_cur, even=True)
@@ -146,6 +159,30 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
                 tot_height_min: int, tot_height_pitch: int, bot_mirror: bool, top_mirror: bool,
                 hm_shift: Union[int, HalfInt] = 0, max_iter: int = 100
                 ) -> Tuple[ImmutableList[RowPlaceInfo], List[Tuple[WireGraph, WireGraph]]]:
+    """Used by place_rows_compact to place rows after getting RowPlaceSpecs for all rows.
+
+    Parameters
+    ----------
+    tr_manager : TrackManager
+        the track manager of the MOSBase.
+    tech_cls : MOSTech
+        the technology specific class for drawing layout
+    pspecs_list : Sequence[RowPlaceSpecs]
+        list of RowPlaceSpecs. See _get_row_place_specs for construction details
+    tot_height_min: int
+        Minimum cell height, set by e.g. desired heigher metal tracks.
+    tot_height_pitch: int
+        Quantize the cell height to this dimension. Typically a tile height.
+    bot_mirror : bool
+        True to satisfy mirror placement constraint on the bottom edge.
+    top_mirror : bool
+        True to satisfy mirror placement constraint on the top edge.
+    hm_shift: Union[int, HalfInt]
+        Optional vertical track shift for the bottom (0th) row.
+    max_iter:
+        Maximum number of iterations to try to fix the cell bottom - active bottom extension
+            to fit the bottom tracks.
+    """
     grid = tr_manager.grid
     blk_h_pitch = tech_cls.blk_h_pitch
     conn_layer = tech_cls.conn_layer
@@ -160,13 +197,13 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
     pinfo_list = []
     prev_wg: Optional[WireGraph] = None
     row_graph_list: List[Tuple[WireGraph, WireGraph]] = []
-    # first pass: determine Y coordinates of each row.
+
     for idx, pspecs in enumerate(pspecs_list):
         bot_ext_info = pspecs.bot_ext_info
         top_ext_info = pspecs.top_ext_info
         bot_conn_y_table = pspecs.bot_conn_y_table
+        mid_conn_y_table = pspecs.mid_conn_y_table
         top_conn_y_table = pspecs.top_conn_y_table
-
         row_specs = pspecs.row_specs
         ignore_bot_vm_sp_le = row_specs.ignore_bot_vm_sp_le
         ignore_top_vm_sp_le = row_specs.ignore_top_vm_sp_le
@@ -174,9 +211,11 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
         row_info = pspecs.row_info
         blk_h = row_info.height
 
-        bot_wg = WireGraph.make_wire_graph(hm_layer, tr_manager, row_specs.bot_wires)
-        top_wg = WireGraph.make_wire_graph(hm_layer, tr_manager, row_specs.top_wires)
+        bot_wg: WireGraph = WireGraph.make_wire_graph(hm_layer, tr_manager, row_specs.bot_wires)
+        mid_wg: WireGraph = WireGraph.make_wire_graph(hm_layer, tr_manager, row_specs.mid_wires)
+        top_wg: WireGraph = WireGraph.make_wire_graph(hm_layer, tr_manager, row_specs.top_wires)
         row_graph_list.append((bot_wg, top_wg))
+
         if idx == 0:
             # first row, place bottom wires using mirror/shift constraints
             bot_wg.place_compact(hm_layer, tr_manager, bot_mirror=bot_mirror, shift=hm_shift)
@@ -184,7 +223,7 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
             # subsequent rows, place bottom wires using previous wire graph
             bot_wg.place_compact(hm_layer, tr_manager, prev_wg=prev_wg)
 
-        bnd_table = bot_wg.get_placement_bounds(hm_layer, grid)
+        bnd_table: Dict[str, List[Tuple[HalfInt, int]]] = bot_wg.get_placement_bounds(hm_layer, grid)
 
         # find Y coordinate of MOS row
         ycur = ytop_prev
@@ -254,32 +293,70 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
                                             conn_y_bnds_bot[0], False)
         conn_y_bnds_bot[1] = _update_y_conn(grid, row_info, conn_layer, ycur, bnd_table,
                                             conn_y_bnds_bot[1], True)
-        # place top wires
-        is_top_row = (idx == num_rows - 1)
-        conn_y_bnds_top = [COORD_MAX, COORD_MIN]
-        pcons = {}
-        for wtype, conn_y in top_conn_y_table.items():
-            pcons[wtype.name] = ycur + conn_y[0]
-            if wtype.is_physical:
-                conn_y_bnds_top[0] = min(conn_y_bnds_top[0], ycur + conn_y[0])
-                conn_y_bnds_top[1] = max(conn_y_bnds_top[1], ycur + conn_y[1])
-
         if bot_wg:
             prev_wg = bot_wg
-        if top_wg:
-            top_wg.place_compact(hm_layer, tr_manager,
-                                 pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
-                                 prev_wg=prev_wg, top_mirror=top_mirror and is_top_row,
-                                 ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_top[1]))
-            if row_info.row_type.is_substrate:
-                top_wg.align_wires(hm_layer, tr_manager, ytop_prev, ycur + blk_h, top_pcons=None)
 
-        # get ytop_conn
-        bnd_table = top_wg.get_placement_bounds(hm_layer, grid)
-        conn_y_bnds_top[0] = _update_y_conn(grid, row_info, conn_layer, ycur, bnd_table,
-                                            conn_y_bnds_top[0], False)
-        conn_y_bnds_top[1] = _update_y_conn(grid, row_info, conn_layer, ycur, bnd_table,
-                                            conn_y_bnds_top[1], True)
+        is_top_row = (idx == num_rows - 1)
+        if row_specs.double_gate:
+            # place middle wires
+            conn_y_bnds_mid = [COORD_MAX, COORD_MIN]
+            pcons = {}
+            for wtype, conn_y in mid_conn_y_table.items():
+                pcons[wtype.name] = ycur + conn_y[0]
+                if wtype.is_physical:
+                    conn_y_bnds_mid[0] = min(conn_y_bnds_mid[0], ycur + conn_y[0])
+                    conn_y_bnds_mid[1] = max(conn_y_bnds_mid[1], ycur + conn_y[1])
+
+            if mid_wg:
+                mid_wg.place_compact(hm_layer, tr_manager,
+                                     pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
+                                     prev_wg=prev_wg, ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_mid[1]))
+                prev_wg = mid_wg
+            
+            # place top wires above the middle wires
+            conn_y_bnds_top = [COORD_MAX, COORD_MIN]
+            pcons = {}
+            for wtype, conn_y in top_conn_y_table.items():
+                pcons[wtype.name] = ycur + conn_y[0]
+                if wtype.is_physical:
+                    conn_y_bnds_top[0] = min(conn_y_bnds_top[0], ycur + conn_y[0])
+                    conn_y_bnds_top[1] = max(conn_y_bnds_top[1], ycur + conn_y[1])
+
+            if top_wg:
+                top_wg.place_compact(hm_layer, tr_manager,
+                                     pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
+                                     prev_wg=prev_wg, ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_top[1]))
+                prev_wg = top_wg
+            
+            bnd_table = top_wg.get_placement_bounds(hm_layer, grid)
+            conn_y_bnds_top[0] = _update_y_conn(grid, row_info, conn_layer, ycur, bnd_table,
+                                                conn_y_bnds_top[0], False)
+            conn_y_bnds_top[1] = _update_y_conn(grid, row_info, conn_layer, ycur, bnd_table,
+                                                conn_y_bnds_top[1], True)
+        else:
+            # place top wires
+            conn_y_bnds_top = [COORD_MAX, COORD_MIN]
+            pcons = {}
+            for wtype, conn_y in top_conn_y_table.items():
+                pcons[wtype.name] = ycur + conn_y[0]
+                if wtype.is_physical:
+                    conn_y_bnds_top[0] = min(conn_y_bnds_top[0], ycur + conn_y[0])
+                    conn_y_bnds_top[1] = max(conn_y_bnds_top[1], ycur + conn_y[1])
+
+            if top_wg:
+                top_wg.place_compact(hm_layer, tr_manager,
+                                     pcons=PlaceFun(conn_layer, grid, pcons, RoundMode.GREATER_EQ),
+                                     prev_wg=prev_wg, top_mirror=top_mirror and is_top_row,
+                                     ytop_conn=max(conn_y_bnds_bot[1], conn_y_bnds_top[1]))
+                if row_info.row_type.is_substrate:
+                    top_wg.align_wires(hm_layer, tr_manager, ytop_prev, ycur + blk_h, top_pcons=None)
+
+            # get ytop_conn
+            bnd_table = top_wg.get_placement_bounds(hm_layer, grid)
+            conn_y_bnds_top[0] = _update_y_conn(grid, row_info, conn_layer, ycur, bnd_table,
+                                                conn_y_bnds_top[0], False)
+            conn_y_bnds_top[1] = _update_y_conn(grid, row_info, conn_layer, ycur, bnd_table,
+                                                conn_y_bnds_top[1], True)
 
         # compute ytop
         ytop_blk = ycur + blk_h
@@ -311,7 +388,8 @@ def _place_rows(tr_manager: TrackManager, tech_cls: MOSTech, pspecs_list: Sequen
         ybot_conn = min(conn_y_bnds_bot[0], conn_y_bnds_top[0])
         ytop_conn = max(conn_y_bnds_bot[1], conn_y_bnds_top[1])
         pinfo_list.append(RowPlaceInfo(row_info, bot_wg.get_wire_lookup(), top_wg.get_wire_lookup(),
-                                       ytop_prev, ytop, ycur, ytop_blk, (ybot_conn, ytop_conn)))
+                                       ytop_prev, ytop, ycur, ytop_blk, (ybot_conn, ytop_conn),
+                                       mid_wires=mid_wg.get_wire_lookup()))
 
         # update previous row information
         ytop_prev = ytop

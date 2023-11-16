@@ -22,7 +22,7 @@ from ..enum import MOSPortType, MOSType
 from ..data import draw_layout_in_template
 
 from .tech import MOSTech
-from .data import MOSEdgeInfo, RowExtInfo, BlkExtInfo, MOSRowInfo
+from .data import MOSEdgeInfo, RowExtInfo, BlkExtInfo, MOSRowInfo, MOSLayInfo
 
 
 class MOSConn(TemplateBase):
@@ -95,10 +95,11 @@ class MOSConn(TemplateBase):
         tech_cls: MOSTech = grid.tech_info.get_device_tech('mos', lch=row_info.lch,
                                                            arr_options=arr_options)
 
-        mos_info = tech_cls.get_mos_conn_info(row_info, conn_layer, seg, w, stack, g_on_s, options)
+        mos_info: MOSLayInfo = tech_cls.get_mos_conn_info(row_info, conn_layer, seg, w, stack, g_on_s, options)
         draw_layout_in_template(self, mos_info.lay_info)
 
         g_conn_y = row_info.g_conn_y
+        g2_conn_y = row_info.g2_conn_y
         if g_on_s:
             if (stack & 1) == 0:
                 d_conn_y = row_info.ds_g_conn_y
@@ -121,12 +122,20 @@ class MOSConn(TemplateBase):
         d_tr_p = d_pitch // pitch
         s_tr_p = s_pitch // pitch
 
-        gw = self.add_wires(conn_layer, g_tr, g_conn_y[0], g_conn_y[1], num=num_g, pitch=g_tr_p)
         dw = self.add_wires(conn_layer, d_tr, d_conn_y[0], d_conn_y[1], num=num_d, pitch=d_tr_p)
         sw = self.add_wires(conn_layer, s_tr, s_conn_y[0], s_conn_y[1], num=num_s, pitch=s_tr_p)
-        self.add_pin('g', gw)
         self.add_pin('d', dw)
         self.add_pin('s', sw)
+
+        """Double gate options: draw_g enables drawing g. draw_g2 enables drawing g2. Defaults to drawing both"""
+        draw_g = options.get('draw_g', True)
+        draw_g2 = options.get('draw_g2', True)
+        if not row_info.double_gate or draw_g:
+            gw = self.add_wires(conn_layer, g_tr, g_conn_y[0], g_conn_y[1], num=num_g, pitch=g_tr_p)
+            self.add_pin('g', gw)
+        if row_info.double_gate and draw_g2:
+            g2w = self.add_wires(conn_layer, g_tr, g2_conn_y[0], g2_conn_y[1], num=num_g, pitch=g_tr_p)
+            self.add_pin('g2', g2w)
 
         if mos_info.m_info is not None:
             m_xc, num_m, m_pitch = mos_info.m_info

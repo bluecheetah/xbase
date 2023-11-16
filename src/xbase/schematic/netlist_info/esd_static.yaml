@@ -1,0 +1,267 @@
+lib_name: xbase
+cell_name: esd_static
+view_name: schematic
+bbox:
+  - -350
+  - 0
+  - 80
+  - 163
+terminals:
+  VSS:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -280
+            - 80
+            - R0
+          bbox:
+            - -341
+            - 54
+            - -270
+            - 90
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -305
+            - 80
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 2
+    ttype: 2
+  minus:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -280
+            - 120
+            - R0
+          bbox:
+            - -341
+            - 94
+            - -270
+            - 130
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -305
+            - 120
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 2
+  plus:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -280
+            - 140
+            - R0
+          bbox:
+            - -341
+            - 114
+            - -270
+            - 150
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -305
+            - 140
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 2
+shapes:
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: minus
+      points:
+        -
+          - -120
+          - 120
+        -
+          - -120
+          - 160
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: plus
+      points:
+        -
+          - -120
+          - 0
+        -
+          - -120
+          - 40
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: VSS
+      points:
+        -
+          - -80
+          - 80
+        -
+          - -40
+          - 80
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: plus
+      origin:
+        - -127
+        - 20
+      alignment: 5
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: plus
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: VSS
+      origin:
+        - -76
+        - 87
+      alignment: 2
+      orient: R0
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: VSS
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: minus
+      origin:
+        - -127
+        - 140
+      alignment: 5
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: minus
+instances:
+  XESD:
+    lib_name: BAG_prim
+    cell_name: esd_vdd
+    view_name: symbol
+    xform:
+      - -160
+      - 40
+      - R0
+    bbox:
+      - -232
+      - 17
+      - 80
+      - 140
+    connections:
+      GUARD_RING: VSS
+      MINUS: minus
+      PLUS: plus
+    params:
+      {}
+    is_primitive: true
+props:
+  connectivityLastUpdated:
+    - 0
+    - 1575
+  lastSchematicExtraction:
+    - 4
+    - time_val: 1623558701
+  net#:
+    - 0
+    - 0
+  pin#:
+    - 0
+    - 3
+  schGeometryLastUpdated:
+    - 0
+    - 1575
+  schGeometryVersion:
+    - 3
+    - sch.ds.gm.1.4
+  schXtrVersion:
+    - 3
+    - sch.10.0
+app_defs:
+  _dbLastSavedCounter:
+    - 0
+    - 1575
+  _dbvCvTimeStamp:
+    - 0
+    - 1575
+  cdbRevision:
+    - 0
+    - 227612
+  cdnSPDesignMajorVersion:
+    - 0
+    - 2

@@ -433,6 +433,10 @@ class MOSBasePlaceInfo:
         return self._priority
 
     @property
+    def wire_lookup(self) -> ImmutableSortedDict[int, WireLookup]:
+        return self._wire_lookup
+
+    @property
     def tile_options(self) -> Param:
         return self._options
 
@@ -936,10 +940,19 @@ class TilePatternElement:
         rpinfo = pinfo.get_row_place_info(row_idx)
         if isinstance(wire_type, bool):
             top = wire_type
+            wlookup = rpinfo.top_wires if top else rpinfo.bot_wires
         else:
-            flip_row = rpinfo.row_info.flip
-            top = (wire_type.is_gate == flip_row)
-        wlookup = rpinfo.top_wires if top else rpinfo.bot_wires
+            if rpinfo.row_info.double_gate:
+                flip_row = rpinfo.row_info.flip
+                if not (wire_type.is_gate or wire_type.is_gate2):
+                    wlookup = rpinfo.mid_wires
+                else:
+                    top = (wire_type.is_gate == flip_row)
+                    wlookup = rpinfo.top_wires if top else rpinfo.bot_wires
+            else:
+                flip_row = rpinfo.row_info.flip
+                top = (wire_type.is_gate == flip_row)
+                wlookup = rpinfo.top_wires if top else rpinfo.bot_wires
 
         if flip_tile:
             return wlookup, yb + pinfo.height, -1

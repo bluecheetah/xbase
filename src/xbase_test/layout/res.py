@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Type, Mapping
 
 from bag.util.immutable import Param
 from bag.layout.template import TemplateDB
+from bag.design.module import Module
 
 from xbase.layout.array.base import ArrayBase
-from xbase.layout.res.base import ResBasePlaceInfo
+from xbase.layout.res.base import ResBasePlaceInfo, ResArrayBase
 
 
 class ResOnlyCore(ArrayBase):
-    """A MOSBase of only rows of transistors, no connection specs.
-    """
+    """An array of resistors"""
 
     def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
         ArrayBase.__init__(self, temp_db, params, **kwargs)
@@ -38,3 +38,25 @@ class ResOnlyCore(ArrayBase):
     def draw_layout(self):
         pinfo = ResBasePlaceInfo.make_place_info(self.grid, self.params['pinfo'])
         self.draw_base(pinfo)
+
+
+class ResArray(ResArrayBase):
+    """Another array of resistors"""
+
+    def __init__(self, temp_db: TemplateDB, params: Param, **kwargs: Any) -> None:
+        ResArrayBase.__init__(self, temp_db, params, **kwargs)
+
+    @classmethod
+    def get_schematic_class(cls) -> Optional[Type[Module]]:
+        return None
+
+    @classmethod
+    def get_params_info(cls) -> Mapping[str, str]:
+        return dict(
+            pinfo='ResBasePlaceInfo object',
+        )
+
+    def draw_layout(self) -> None:
+        params = self.params
+        self.draw_base(params['pinfo'])
+

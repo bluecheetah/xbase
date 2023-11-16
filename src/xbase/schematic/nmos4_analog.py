@@ -59,10 +59,26 @@ class xbase__nmos4_analog(Module):
         seg = self.params['seg']
         intent = self.params['intent']
         stack = self.params['stack']
-        ans = f'nmos4_{intent}_w{w}_l{l}_seg{seg}'
+
+        # choose 3 terminal mos without extra parameter by encoding it in the intent
+        # e.g.: 3_standard
+        if intent.startswith('4_'):
+            # Case 1: 4 terminal mos
+            mos_type = f'nmos{intent}'
+        elif intent.startswith('3_'):
+            # Case 2: changing to 3 terminal mos
+            mos_type = f'nmos{intent}'
+        else:
+            # Case 3: default case
+            mos_type = f'nmos4_{intent}'
+
+        ans = f'{mos_type}_w{w}_l{l}_seg{seg}'
         if stack != 1:
             ans += f'_stack{stack}'
         return ans
 
     def design(self, w: int, lch: int, seg: int, intent: str, stack: int) -> None:
         self.design_transistor('XN', w, lch, seg, intent, m='mid', stack=stack)
+
+        if intent.startswith('3_'):
+            self.remove_pin('b')

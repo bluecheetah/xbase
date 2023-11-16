@@ -1,0 +1,323 @@
+lib_name: xbase
+cell_name: momcap_char
+view_name: schematic
+bbox:
+  - -350
+  - -27
+  - 174
+  - 150
+terminals:
+  VSS:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -280
+            - 80
+            - R0
+          bbox:
+            - -341
+            - 54
+            - -270
+            - 90
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -305
+            - 80
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 2
+    ttype: 2
+  minus:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -280
+            - 120
+            - R0
+          bbox:
+            - -341
+            - 94
+            - -270
+            - 130
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -305
+            - 120
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 2
+  plus:
+    obj:
+      - 1
+      - inst:
+          lib_name: basic
+          cell_name: iopin
+          view_name: symbolr
+          xform:
+            - -280
+            - 140
+            - R0
+          bbox:
+            - -341
+            - 114
+            - -270
+            - 150
+          connections:
+            {}
+          params:
+            {}
+          is_primitive: true
+        attr:
+          layer: 229
+          purpose: 237
+          net: ""
+          origin:
+            - -305
+            - 140
+          alignment: 7
+          orient: R0
+          font: 5
+          height: 10
+          overbar: false
+          visible: true
+          drafting: true
+          attr_type: 0
+          format: 1
+    stype: 0
+    ttype: 2
+shapes:
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: plus2
+      points:
+        -
+          - -90
+          - -20
+        -
+          - -90
+          - 20
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: plus
+      points:
+        -
+          - -90
+          - 80
+        -
+          - -90
+          - 120
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: minus2
+      points:
+        -
+          - 80
+          - -20
+        -
+          - 80
+          - 20
+  -
+    - 5
+    - layer: 228
+      purpose: 4294967295
+      net: minus
+      points:
+        -
+          - 80
+          - 80
+        -
+          - 80
+          - 120
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: plus
+      origin:
+        - -97
+        - 110
+      alignment: 5
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: plus
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: minus
+      origin:
+        - 73
+        - 110
+      alignment: 5
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: minus
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: plus2
+      origin:
+        - -97
+        - 0
+      alignment: 5
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: plus2
+  -
+    - 7
+    - layer: 228
+      purpose: 237
+      net: minus2
+      origin:
+        - 73
+        - 0
+      alignment: 5
+      orient: R90
+      font: 5
+      height: 10
+      overbar: false
+      visible: true
+      drafting: true
+      text: minus2
+instances:
+  XRESN:
+    lib_name: BAG_prim
+    cell_name: res_metal_1
+    view_name: symbol
+    xform:
+      - 40
+      - 90
+      - R0
+    bbox:
+      - -52
+      - 16
+      - 174
+      - 90
+    connections:
+      MINUS: minus2
+      PLUS: minus
+    params:
+      l:
+        - 3
+        - 2u
+      w:
+        - 3
+        - 1u
+    is_primitive: true
+  XRESP:
+    lib_name: BAG_prim
+    cell_name: res_metal_1
+    view_name: symbol
+    xform:
+      - -130
+      - 90
+      - R0
+    bbox:
+      - -222
+      - 16
+      - 4
+      - 90
+    connections:
+      MINUS: plus2
+      PLUS: plus
+    params:
+      l:
+        - 3
+        - 2u
+      w:
+        - 3
+        - 1u
+    is_primitive: true
+props:
+  connectivityLastUpdated:
+    - 0
+    - 1026
+  lastSchematicExtraction:
+    - 4
+    - time_val: 1612159932
+  net#:
+    - 0
+    - 0
+  pin#:
+    - 0
+    - 3
+  schGeometryLastUpdated:
+    - 0
+    - 1026
+  schGeometryVersion:
+    - 3
+    - sch.ds.gm.1.4
+  schXtrVersion:
+    - 3
+    - sch.10.0
+app_defs:
+  _dbLastSavedCounter:
+    - 0
+    - 1026
+  _dbvCvTimeStamp:
+    - 0
+    - 1026
+  cdbRevision:
+    - 0
+    - 227612
+  cdnSPDesignMajorVersion:
+    - 0
+    - 2

@@ -66,6 +66,7 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
         tech_cls = master.tech_cls
         bbox = master.bound_box
         used_arr = master.used_array
+        num_tiles = used_arr.num_tiles
 
         w_blk, h_blk = self.grid.get_block_size(top_layer,
                                                 half_blk_x=half_blk_x, half_blk_y=half_blk_y)
@@ -73,16 +74,15 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
         w_master = bbox.w
         h_master = bbox.h
         w_edge = tech_cls.get_edge_width(w_master, w_blk)
-        base_end_info = tech_cls.get_mos_base_end_info(master.place_info, h_blk)
+        bot_pinfo, _, bot_flip = used_arr.get_tile_info(0)
+        top_pinfo, _, top_flip = used_arr.get_tile_info(num_tiles - 1)
+        bot_rpinfo = bot_pinfo.get_row_place_info(-1) if bot_flip else bot_pinfo.get_row_place_info(0)
+        top_rpinfo = top_pinfo.get_row_place_info(0) if top_flip else top_pinfo.get_row_place_info(-1)
+        base_end_info = tech_cls.get_mos_base_end_info(bot_rpinfo, top_rpinfo, bot_flip, top_flip, h_blk)
 
         # get top/bottom boundary delta/height
-        num_tiles = used_arr.num_tiles
-        idx_bot = int(used_arr.get_flip_tile(0))
-        idx_top = int(not used_arr.get_flip_tile(num_tiles - 1))
-        dy_bot = base_end_info.h_blk[idx_bot]
-        dy_top = base_end_info.h_blk[idx_top]
-        h_end_bot = base_end_info.h_mos_end[idx_bot]
-        h_end_top = base_end_info.h_mos_end[idx_top]
+        dy_bot, dy_top = base_end_info.h_blk
+        h_end_bot, h_end_top = base_end_info.h_mos_end
 
         self._xform = Transform(w_edge, dy_bot)
         inst = self.add_instance(master, inst_name='X0', xform=self._xform)
@@ -273,25 +273,61 @@ class MOSBaseWrapper(TemplateBase, abc.ABC):
 
         cut_mode, bot_exty, top_exty = tech.get_extension_regions(re_bot, re_top, ext_h)
         if cut_mode.num_cut == 2 and bot_exty == top_exty == 0:
-            if be_bot[0].guard_ring and be_bot[0].fg_dev[0][1] is be_top[0].fg_dev[0][1]:
+            if be_bot[0].guard_ring and be_top[0].guard_ring and be_bot[0].fg_dev[0][1] is be_top[0].fg_dev[0][1]:
                 # this is extension within a guard ring
-                if len(be_bot) > 1:
-                    fg_edge = be_bot[0].fg
-                    fg_gr = fg_edge + be_bot[1].fg_dev[0][0]
+                gr_sub_type = gr2_sub_type = be_bot[0].fg_dev[0][1]
+                if tech.has_double_guard_ring:
+                    if len(be_bot) == 1:
+                        # this is extension between outer guard ring and inner guard ring on the bottom
+                        fg_edge = be_top[0].fg
+                        fg_gr = fg_edge + be_top[1].fg_dev[0][0]
+                        fg_edge2 = 0
+                        fg_gr2 = 0
+                    elif len(be_top) == 1:
+                        # this is extension between outer guard ring and inner guard ring on the top
+                        fg_edge = be_bot[0].fg
+                        fg_gr = fg_edge + be_bot[1].fg_dev[0][0]
+                        fg_edge2 = 0
+                        fg_gr2 = 0
+                    else:
+                        # this is extension inside inner guard ring
+                        _be = be_bot if len(be_bot) > len(be_top) else be_top
+                        fg_edge = _be[0].fg
+                        fg_gr = fg_edge + _be[1].fg_dev[0][0]
+                        fg_edge2 = _be[2].fg
+                        fg_gr2 = _be[2].fg + _be[3].fg_dev[0][0]
+                        gr2_sub_type = _be[2].fg_dev[0][1]
                 else:
-                    fg_edge = be_top[0].fg
-                    fg_gr = fg_edge + be_top[1].fg_dev[0][0]
+                    _be = be_bot if len(be_bot) > len(be_top) else be_top
+                    fg_edge = _be[0].fg
+                    fg_gr = fg_edge + _be[1].fg_dev[0][0]
+                    fg_edge2 = 0
+                    fg_gr2 = 0
 
-                ext_dx = fg_gr * tech.sd_pitch
-                ext_params = dict(lch=lch, num_cols=fg - 2 * fg_gr, height=ext_h, bot_info=re_bot,
+                ext_dx = (fg_gr + fg_edge2 + fg_gr2) * tech.sd_pitch
+                ext_params = dict(lch=lch, num_cols=fg - 2 * (fg_gr + fg_edge2 + fg_gr2), height=ext_h, bot_info=re_bot,
                                   top_info=re_top, gr_info=(fg_edge, fg_gr),
                                   arr_options=arr_options)
                 ext_master = self.new_template(MOSExt, params=ext_params, grid=grid)
+                edge_info = ext_master.edge_info
+
+                if fg_gr2 > 0:
+                    # add inner guard ring
+                    gr2_params = dict(lch=lch, num_cols=fg_gr2, edge_cols=fg_edge2, height=ext_h,
+                                      bot_info=re_bot, top_info=re_top, sub_type=gr2_sub_type,
+                                      einfo=edge_info, arr_options=arr_options)
+                    gr2_master = self.new_template(MOSExtGR, params=gr2_params, grid=grid)
+                    edge_info = gr2_master.edge_info
+
+                    dx2 = dx + (fg_gr + fg_edge2) * tech.sd_pitch
+                    self.add_instance(gr2_master, inst_name=f'{prefix}EXGRL2', xform=Transform(dx2, y0))
+                    self.add_instance(gr2_master, inst_name=f'{prefix}EXGRR2',
+                                      xform=Transform(w_tot - dx2, y0, Orientation.MY))
 
                 # add guard ring
                 gr_params = dict(lch=lch, num_cols=fg_gr, edge_cols=fg_edge, height=ext_h,
-                                 bot_info=re_bot, top_info=re_top, sub_type=be_bot[0].fg_dev[0][1],
-                                 einfo=ext_master.edge_info, arr_options=arr_options)
+                                 bot_info=re_bot, top_info=re_top, sub_type=gr_sub_type,
+                                 einfo=edge_info, arr_options=arr_options)
                 gr_master = self.new_template(MOSExtGR, params=gr_params, grid=grid)
                 edge_info = gr_master.edge_info
 
@@ -373,15 +409,18 @@ class GenericWrapper(MOSBaseWrapper):
 
         def private_port_check(lay_id: int) -> bool:
             if lay_id <= top_layer and not grid.is_horizontal(lay_id):
-                print(f'WARNING: ports on private layer {lay_id} detected, '
-                      f'converting to primitive ports.')
+                self.warn(f'ports on private layer {lay_id} detected, converting to primitive ports.')
                 return True
             return False
 
         # re-export pins
         for name in inst.port_names_iter():
             if not master.get_port(name).hidden or export_hidden:
-                self.reexport(inst.get_primitive_port(name, private_port_check))
+                if name in self._port_params:
+                    show = self._port_params[name]['show']
+                else:
+                    show = None
+                self.reexport(inst.get_primitive_port(name, private_port_check), show=show)
 
         # pass out schematic parameters
         self.sch_params = master.sch_params

@@ -63,10 +63,23 @@ class xbase__pmos4_stack(Module):
         seg = self.params['seg']
         intent = self.params['intent']
         stack = self.params['stack']
-        if stack > 1:
-            ans = f'pmos4_{intent}_stack{stack}_w{w}_l{l}_seg{seg}'
+
+        # choose 3 terminal mos without extra parameter by encoding it in the intent
+        # e.g.: 3_standard
+        if intent.startswith('4_'):
+            # Case 1: 4 terminal mos
+            mos_type = f'pmos{intent}'
+        elif intent.startswith('3_'):
+            # Case 2: changing to 3 terminal mos
+            mos_type = f'pmos{intent}'
         else:
-            ans = f'pmos4_{intent}_w{w}_l{l}_seg{seg}'
+            # Case 3: default case
+            mos_type = f'pmos4_{intent}'
+
+        if stack > 1:
+            ans = f'{mos_type}_stack{stack}_w{w}_l{l}_seg{seg}'
+        else:
+            ans = f'{mos_type}_w{w}_l{l}_seg{seg}'
 
         return ans
 
@@ -90,3 +103,6 @@ class xbase__pmos4_stack(Module):
             gate = ['g<0>', 'g<1>']
 
         self.design_transistor('XP', w, lch, seg, intent, g=gate, m='m', stack=stack)
+
+        if intent.startswith('3_'):
+            self.remove_pin('b')

@@ -145,6 +145,12 @@ class MOSBase(TemplateBase, abc.ABC):
         return self.tech_cls.sub_sep_col
 
     @property
+    def gr_sub_sep_col(self) -> int:
+        """int: column separation needed between guard ring substrate and inner substrate.
+        """
+        return self.tech_cls.gr_sub_sep_col
+
+    @property
     def min_sub_col(self) -> int:
         """int: Minimum number of fingers for substrate contact."""
         return self.tech_cls.min_sub_col
@@ -153,6 +159,34 @@ class MOSBase(TemplateBase, abc.ABC):
     def can_short_adj_tracks(self) -> bool:
         """bool: True if you can short adjacent transistor ports using hm_layer."""
         return self.tech_cls.can_short_adj_tracks(self.conn_layer)
+
+    def can_abut_mos(self, row_info: MOSRowInfo) -> bool:
+        """bool: True if you can abut mos by sharing drain or source."""
+        return self.tech_cls.can_abut_mos(row_info)
+
+    def can_extend_ds_conn(self, g_side: bool, threshold: str) -> bool:
+        """
+        Parameters
+        ----------
+        g_side : bool
+            True for checking for extension on gate side, False for checking on the other side
+        threshold : str
+            Threshold of mos in the row
+        Returns
+        -------
+        ans : bool
+            True if you extend drain or source on conn_layer, on the gate side or the other side."""
+        return self.tech_cls.can_extend_ds_conn(g_side, threshold)
+
+    @property
+    def can_draw_double_gate(self) -> bool:
+        """bool: True if double gates are supported."""
+        return self.tech_cls.can_draw_double_gate
+
+    @property
+    def has_double_guard_ring(self) -> bool:
+        """bool: True if the PDK requires double guard ring."""
+        return self.tech_cls.has_double_guard_ring
 
     def draw_base(self, obj: Union[MOSBasePlaceInfo,
                                    TilePatternElement,
@@ -367,8 +401,10 @@ class MOSBase(TemplateBase, abc.ABC):
 
         # construct port object
         m_pin = inst.get_pin('m') if inst.has_port('m') else None
-        return MOSPorts(inst.get_pin('g'), inst.get_pin('d'), inst.get_pin('s'),
-                        master.shorted_ports, m=m_pin)
+        g_pin = inst.get_pin('g') if inst.has_port('g') else None
+        g2_pin = inst.get_pin('g2') if inst.has_port('g2') else None
+        return MOSPorts(g_pin, inst.get_pin('d'), inst.get_pin('s'),
+                        master.shorted_ports, m=m_pin, g2=g2_pin)
 
     def add_nand2(self, row_idx: int, col_idx: int, seg: int, *, tile_idx: int = 0, w: int = 0,
                   stack: int = 1, flip_lr: bool = False, export_mid: bool = False,

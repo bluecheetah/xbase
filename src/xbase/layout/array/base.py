@@ -15,16 +15,18 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Mapping, List, Union, Type, TypeVar, Tuple
+from typing import Any, Optional, Mapping, List, Union, Type, TypeVar, Tuple, cast
 
 import abc
+import copy
 
 from pybag.enum import Orientation
-from pybag.core import Transform, BBox
+from pybag.core import Transform, BBox, BBoxArray
 
 from bag.util.math import HalfInt
 from bag.util.immutable import Param, combine_hash, ImmutableSortedDict
 from bag.layout.tech import TechInfo
+from bag.layout.core import PyLayInstance
 from bag.layout.routing.base import TrackID, TrackManager, WDictType, SpDictType, WireArray
 from bag.layout.template import TemplateBase, TemplateDB
 from bag.layout.routing.grid import RoutingGrid, TrackSpec
@@ -44,7 +46,8 @@ class ArrayPlaceInfo:
                  tr_widths: WDictType, tr_spaces: SpDictType, top_layer: int, nx: int, ny: int,
                  tech_cls: T, *, conn_layer: Optional[int] = None,
                  tr_specs: Optional[List[TrackSpec]] = None, half_space: bool = True,
-                 ext_mode: ExtendMode = ExtendMode.AREA, **kwargs: Any) -> None:
+                 ext_mode: ExtendMode = ExtendMode.AREA,
+                 base_orient: Orientation = Orientation.R0, is_top: bool = True, **kwargs: Any) -> None:
         self._tech_cls: ArrayTech = tech_cls
 
         # update routing grid
@@ -62,24 +65,42 @@ class ArrayPlaceInfo:
         self._blk_options = Param(kwargs)
         self._nx = nx
         self._ny = ny
+        self._base_orient = base_orient
+        self._is_top = is_top
 
-        tmp = self._tech_cls.size_unit_block(conn_layer, top_layer, nx, ny, self._tr_manager,
-                                             wire_specs, ext_mode, **kwargs)
+        self._wire_specs = wire_specs
+        self._ext_mode = ext_mode
+
+        self._w = None
+        self._h = None
+        self._wlookup = None
+        self._blk_info = None
+        self._hash = None
+
+        self.commit()
+
+    def commit(self):
+        tmp = self._tech_cls.size_unit_block(self._conn_layer, self._top_layer, self._nx, self._ny, self._tr_manager,
+                                             self._wire_specs, self._ext_mode, **self._blk_options)
         self._w: int = tmp[0]
         self._h: int = tmp[1]
         self._wlookup: ImmutableSortedDict[int, WireLookup] = ImmutableSortedDict(tmp[2])
         self._blk_info: ArrayLayInfo = tmp[3]
 
-        # compute hash
+        self._hash = self.compute_hash()
+
+    def compute_hash(self):
         seed = combine_hash(hash(self._tr_manager), self._conn_layer)
         seed = combine_hash(seed, self._top_layer)
         seed = combine_hash(seed, self._nx)
         seed = combine_hash(seed, self._ny)
+        seed = combine_hash(seed, self._base_orient)
+        seed = combine_hash(seed, self._is_top)
         seed = combine_hash(seed, self._w)
         seed = combine_hash(seed, self._h)
         seed = combine_hash(seed, hash(self._wlookup))
         seed = combine_hash(seed, hash(self._blk_options))
-        self._hash = seed
+        return seed
 
     def __hash__(self) -> int:
         return self._hash
@@ -138,10 +159,12 @@ class ArrayPlaceInfo:
 
     @property
     def width(self) -> int:
+        """Width of a unit cell, in resolution units"""
         return self._w
 
     @property
     def height(self) -> int:
+        """Height of a unit cell, in resolution units"""
         return self._h
 
     @property
@@ -153,11 +176,38 @@ class ArrayPlaceInfo:
         return self._ny
 
     @property
+    def is_top(self) -> bool:
+        return self._is_top
+
+    @property
     def blk_info(self) -> ArrayLayInfo:
         return self._blk_info
 
     def get_wire_track_info(self, layer: int, wire_name: str, wire_idx: int) -> Tuple[HalfInt, int]:
         return self._wlookup[layer].get_track_info(wire_name, wire_idx)
+
+    def get_sub_place_info(self, nx: Optional[int] = None, ny: Optional[int] = None, top_layer: Optional[int] = None,
+                           row: int = 0, col: int = 0, base_orient: Optional[Orientation] = None,
+                           is_top: bool = False) -> ArrayPlaceInfo:
+        ans = copy.copy(self)
+
+        if nx is not None:
+            ans._nx = nx
+        if ny is not None:
+            ans._ny = ny
+        if top_layer is not None:
+            ans._top_layer = top_layer
+        if base_orient is None:
+            base_orient = self._base_orient
+            if row & 1:
+                base_orient = base_orient.flip_ud()
+            if col & 1:
+                base_orient = base_orient.flip_lr()
+            ans._base_orient = base_orient
+        ans._is_top = is_top
+
+        ans.commit()
+        return ans
 
 
 class ArrayBase(TemplateBase, abc.ABC):
@@ -190,9 +240,15 @@ class ArrayBase(TemplateBase, abc.ABC):
     def ny(self) -> int:
         return self._info.ny
 
-    def draw_base(self, info: ArrayPlaceInfo) -> ArrayUnit:
+    def draw_base(self, info: ArrayPlaceInfo, flip_lr: bool = False, flip_ud: bool = False,
+                  commit: bool = None) -> ArrayUnit:
         self._info = info
         self.grid = info.grid
+
+        # By default, only commit unit instances if info is the top ArrayPlaceInfo.
+        # If info is not top (i.e. a subset of another ArrayPlaceInfo), the unit array should be drawn at the top level.
+        if commit is None:
+            commit = info.is_top
 
         self._unit = master = self.new_template(ArrayUnit, params=dict(desc=self.tech_cls.desc,
                                                                        blk_info=info.blk_info))
@@ -203,18 +259,31 @@ class ArrayBase(TemplateBase, abc.ABC):
         nye = info.ny - nyo
         spx = 2 * info.width
         spy = 2 * info.height
-        self.add_instance(master, inst_name='XLL', xform=Transform(0, 0),
-                          nx=nxe, ny=nye, spx=spx, spy=spy)
+
+        orient_list = [Orientation.R0, Orientation.MY, Orientation.MX, Orientation.R180]
+
+        if flip_lr:
+            orient_list = [orient.flip_lr() for orient in orient_list]
+            dx_list = [spx // 2, spx // 2, spx // 2, spx // 2]
+        else:
+            dx_list = [0, spx, 0, spx]
+
+        if flip_ud:
+            orient_list = [orient.flip_ud() for orient in orient_list]
+            dy_list = [spy // 2, spy // 2, spy // 2, spy // 2]
+        else:
+            dy_list = [0, 0, spy, spy]
+        xform_ll, xform_lr, xform_ul, xform_ur = [Transform(dx, dy, orient) for dx, dy, orient in
+                                                  zip(dx_list, dy_list, orient_list)]
+
+        self.add_instance(master, inst_name='XLL', xform=xform_ll, nx=nxe, ny=nye, spx=spx, spy=spy, commit=commit)
         if nxo > 0:
-            self.add_instance(master, inst_name='XLR', xform=Transform(spx, 0, Orientation.MY),
-                              nx=nxo, ny=nye, spx=spx, spy=spy)
+            self.add_instance(master, inst_name='XLR', xform=xform_lr, nx=nxo, ny=nye, spx=spx, spy=spy, commit=commit)
         if nyo > 0:
-            self.add_instance(master, inst_name='XUL', xform=Transform(0, spy, Orientation.MX),
-                              nx=nxe, ny=nyo, spx=spx, spy=spy)
+            self.add_instance(master, inst_name='XUL', xform=xform_ul, nx=nxe, ny=nyo, spx=spx, spy=spy, commit=commit)
             if nxo > 0:
-                self.add_instance(master, inst_name='XUR',
-                                  xform=Transform(spx, spy, Orientation.R180),
-                                  nx=nxo, ny=nyo, spx=spx, spy=spy)
+                self.add_instance(master, inst_name='XUR', xform=xform_ur, nx=nxo, ny=nyo, spx=spx, spy=spy,
+                                  commit=commit)
 
         bbox = BBox(0, 0, info.nx * info.width, info.ny * info.height)
         self.set_size_from_bound_box(info.top_layer, bbox)
@@ -237,7 +306,7 @@ class ArrayBase(TemplateBase, abc.ABC):
                         ) -> HalfInt:
         return self.get_track_info(wire_name, wire_idx=wire_idx, layer=layer)[0]
 
-    def get_device_port(self, xidx: int, yidx: int, name: str) -> WireArray:
+    def get_device_port(self, xidx: int, yidx: int, name: str) -> Union[WireArray, BBox, BBoxArray]:
         w = self._info.width
         h = self._info.height
         orient = Orientation.R0
@@ -252,5 +321,92 @@ class ArrayBase(TemplateBase, abc.ABC):
             orient = orient.flip_ud()
 
         xform = Transform(dx, dy, orient)
+        pins = self._unit.get_port(name).get_pins()
+        nx = ny = len(pins)
+        if nx == 1:
+            return pins[0].get_transform(xform)
+        else:
+            if isinstance(pins[0], WireArray):
+                # Combine into 1 WireArray with num > 1 if possible
+                pins = self.connect_wires(pins[0])
+                return pins[0].get_transform(xform)
+            else:  # List of BBox
+                pins = [cast(BBox, bbox) for bbox in pins]
 
-        return self._unit.get_port(name).get_pins()[0].get_transform(xform)
+                # First, try to make BBoxArray with nx > 1
+                yl = pins[0].yl
+                yh = pins[0].yh
+                w = pins[0].w
+                spx = pins[1].xm - pins[0].xm
+                for pidx, pin in enumerate(pins[1:]):
+                    if not (pin.yl == yl and pin.yh == yh and pin.w == w):
+                        # cannot be combined into BBoxArray if yl, yh, w are not same
+                        break
+                    if pidx != nx - 2:
+                        if pins[pidx + 2].xm - pin.xm != spx:
+                            # cannot be combined into BBoxArray if spx is not same
+                            break
+                else:
+                    return BBoxArray(pins[0], nx=nx, spx=spx).get_transform(xform)
+
+                # Next, try to make BBoxArray with ny > 1
+                xl = pins[0].xl
+                xh = pins[0].xh
+                h = pins[0].h
+                spy = pins[1].ym - pins[0].ym
+                for pidx, pin in enumerate(pins[1:]):
+                    if not (pin.xl == xl and pin.xh == xh and pin.h == h):
+                        # cannot be combined into BBoxArray if xl, xh, h are not same
+                        break
+                    if pidx != ny - 2:
+                        if pins[pidx + 2].ym - pin.ym != spy:
+                            # cannot be combined into BBoxArray if spy is not same
+                            break
+                else:
+                    return BBoxArray(pins[0], ny=ny, spy=spy).get_transform(xform)
+
+                # both the for loops encountered break
+                return pins[0].get_transform(xform)
+
+    def add_tile(self, master: ArrayBase, row_idx: int, col_idx: int, *,
+                 flip_lr: bool = False, flip_ud: bool = False, commit: bool = True) -> PyLayInstance:
+        self._row_check(row_idx, master.ny, flip_ud)
+        self._col_check(col_idx, master.nx, flip_lr)
+
+        unit_h, unit_w = self._info.height, self._info.width
+
+        y0 = row_idx * unit_h
+        x0 = col_idx * unit_w
+
+        if flip_ud:
+            orient = Orientation.MX
+            y0 += unit_h
+        else:
+            orient = Orientation.R0
+
+        if flip_lr:
+            orient = orient.flip_lr()
+            x0 += unit_w
+
+        return self.add_instance(master, inst_name=f'XR{row_idx}C{col_idx}',
+                                 xform=Transform(x0, y0, orient), commit=commit)
+
+    def _row_check(self, row_idx: int, num_rows: int, flip: bool):
+        if flip:
+            row_bot, row_top = row_idx - num_rows + 1, row_idx
+        else:
+            row_bot, row_top = row_idx, row_idx + num_rows - 1
+        if row_bot < 0:
+            raise ValueError(f"Bottom row {row_bot} cannot be less than 0")
+        if row_top >= self.ny:
+            raise ValueError(f"Top row {row_top} cannot be greater than or equal to ny {self.ny}")
+
+    def _col_check(self, col_idx: int, num_cols: int, flip: bool):
+        if flip:
+            col_left, col_right = col_idx - num_cols + 1, col_idx
+        else:
+            col_left, col_right = col_idx, col_idx + num_cols - 1
+        if col_left < 0:
+            raise ValueError(f"left col {col_left} cannot be less than 0")
+        if col_right > self.nx:
+            raise ValueError(f"right col {col_right} cannot be greater than or equal to nx {self.nx}")
