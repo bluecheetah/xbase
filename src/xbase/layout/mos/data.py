@@ -80,9 +80,9 @@ class MOSRowSpecs:
             ds_type = MOSWireType.DS.name
             g_type = MOSWireType.G.name
             g2_type = MOSWireType.G2.name
-            bot_wd = WireData.make_wire_data(bot_wires, Alignment.UPPER_COMPACT, g_type)
+            bot_wd = WireData.make_wire_data(bot_wires, Alignment.UPPER_COMPACT, g2_type if flip else g_type)
             mid_wd = WireData.make_wire_data(mid_wires, Alignment.CENTER_COMPACT, ds_type)
-            top_wd = WireData.make_wire_data(top_wires, Alignment.LOWER_COMPACT, g2_type)
+            top_wd = WireData.make_wire_data(top_wires, Alignment.LOWER_COMPACT, g_type if flip else g2_type)
             return MOSRowSpecs(mos_type, width, threshold, bot_wd, top_wd, mid_wires=mid_wd,
                                options=options, flip=flip, sub_width=sub_width, double_gate=double_gate)
         else:
